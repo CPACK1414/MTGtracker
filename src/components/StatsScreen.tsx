@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { getReportingData, type ReportingData } from "@/app/actions";
+import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
 
 type Tab = "players" | "decks" | "matchups";
+
+const POD_SIZES = Array.from(
+  { length: MAX_POD_SIZE - MIN_POD_SIZE + 1 },
+  (_, i) => i + MIN_POD_SIZE
+);
 
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -12,10 +18,11 @@ function pct(rate: number): string {
 export default function StatsScreen({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<ReportingData | null>(null);
   const [tab, setTab] = useState<Tab>("players");
+  const [podSizeFilter, setPodSizeFilter] = useState<number | null>(null);
 
   useEffect(() => {
-    getReportingData().then(setData);
-  }, []);
+    getReportingData(podSizeFilter).then(setData);
+  }, [podSizeFilter]);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -26,6 +33,28 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         <h1 className="text-base font-bold text-white">Stats</h1>
         <span className="w-12" />
       </header>
+
+      <div className="flex gap-1 overflow-x-auto px-4 pt-3">
+        <button
+          onClick={() => setPodSizeFilter(null)}
+          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+            podSizeFilter === null ? "bg-emerald-500 text-white" : "bg-neutral-900 text-neutral-400"
+          }`}
+        >
+          All pod sizes
+        </button>
+        {POD_SIZES.map((size) => (
+          <button
+            key={size}
+            onClick={() => setPodSizeFilter(size)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+              podSizeFilter === size ? "bg-emerald-500 text-white" : "bg-neutral-900 text-neutral-400"
+            }`}
+          >
+            {size} players
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-1 px-4 py-3">
         {(["players", "decks", "matchups"] as Tab[]).map((t) => (
@@ -45,20 +74,34 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         {!data ? (
           <p className="mt-10 text-center text-sm text-neutral-500">Loading…</p>
         ) : tab === "players" ? (
-          <PlayerLeaderboard players={data.players} />
+          <PlayerLeaderboard players={data.players} podSizeFilter={podSizeFilter} />
         ) : tab === "decks" ? (
-          <DeckLeaderboard decks={data.decks} />
+          <DeckLeaderboard decks={data.decks} podSizeFilter={podSizeFilter} />
         ) : (
-          <MatchupTable matchups={data.matchups} />
+          <MatchupTable matchups={data.matchups} podSizeFilter={podSizeFilter} />
         )}
       </div>
     </div>
   );
 }
 
-function PlayerLeaderboard({ players }: { players: ReportingData["players"] }) {
+function PlayerLeaderboard({
+  players,
+  podSizeFilter,
+}: {
+  players: ReportingData["players"];
+  podSizeFilter: number | null;
+}) {
   if (players.length === 0) {
-    return <EmptyState text="No games logged yet — finish a game to see stats here." />;
+    return (
+      <EmptyState
+        text={
+          podSizeFilter
+            ? `No ${podSizeFilter}-player games logged yet.`
+            : "No games logged yet — finish a game to see stats here."
+        }
+      />
+    );
   }
   return (
     <div className="flex flex-col gap-2">
@@ -86,9 +129,23 @@ function PlayerLeaderboard({ players }: { players: ReportingData["players"] }) {
   );
 }
 
-function DeckLeaderboard({ decks }: { decks: ReportingData["decks"] }) {
+function DeckLeaderboard({
+  decks,
+  podSizeFilter,
+}: {
+  decks: ReportingData["decks"];
+  podSizeFilter: number | null;
+}) {
   if (decks.length === 0) {
-    return <EmptyState text="No decks have been played in a finished game yet." />;
+    return (
+      <EmptyState
+        text={
+          podSizeFilter
+            ? `No decks played in a ${podSizeFilter}-player game yet.`
+            : "No decks have been played in a finished game yet."
+        }
+      />
+    );
   }
   return (
     <div className="flex flex-col gap-2">
@@ -120,10 +177,22 @@ function DeckLeaderboard({ decks }: { decks: ReportingData["decks"] }) {
   );
 }
 
-function MatchupTable({ matchups }: { matchups: ReportingData["matchups"] }) {
+function MatchupTable({
+  matchups,
+  podSizeFilter,
+}: {
+  matchups: ReportingData["matchups"];
+  podSizeFilter: number | null;
+}) {
   if (matchups.length === 0) {
     return (
-      <EmptyState text="No deck-vs-deck matchups yet — needs a finished game where at least two players brought decks." />
+      <EmptyState
+        text={
+          podSizeFilter
+            ? `No deck-vs-deck matchups in ${podSizeFilter}-player games yet.`
+            : "No deck-vs-deck matchups yet — needs a finished game where at least two players brought decks."
+        }
+      />
     );
   }
   return (

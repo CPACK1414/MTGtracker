@@ -178,13 +178,19 @@ export type ReportingData = {
   matchups: DeckMatchup[];
 };
 
-export async function getReportingData(): Promise<ReportingData> {
-  const [allPlayers, allDecks, allGames, allParticipants] = await Promise.all([
+export async function getReportingData(podSize?: number | null): Promise<ReportingData> {
+  const [allPlayers, allDecks, allGamesRaw, allParticipantsRaw] = await Promise.all([
     db.select().from(players),
     db.select().from(decks),
     db.select().from(games),
     db.select().from(gameParticipants),
   ]);
+
+  const allGames = podSize ? allGamesRaw.filter((g) => g.podSize === podSize) : allGamesRaw;
+  const gameIds = new Set(allGames.map((g) => g.id));
+  const allParticipants = podSize
+    ? allParticipantsRaw.filter((p) => gameIds.has(p.gameId))
+    : allParticipantsRaw;
 
   const decksById = new Map(allDecks.map((d) => [d.id, d]));
   const playersById = new Map(allPlayers.map((p) => [p.id, p]));
