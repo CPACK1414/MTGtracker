@@ -1,21 +1,40 @@
 "use client";
 
 import type { Player } from "@/lib/types";
+import CounterChip from "@/components/CounterChip";
+
+export type OpponentDamage = {
+  id: string;
+  name: string;
+  amount: number;
+};
 
 export default function PlayerCard({
   player,
   isLethal,
   isFirst,
+  opponents,
+  poison,
+  radiation,
   onChangeLife,
   onToggleEliminate,
   onRotate,
+  onChangeCommanderDamage,
+  onChangePoison,
+  onChangeRadiation,
 }: {
   player: Player;
   isLethal: boolean;
   isFirst: boolean;
+  opponents: OpponentDamage[];
+  poison: number;
+  radiation: number;
   onChangeLife: (delta: number) => void;
   onToggleEliminate: () => void;
   onRotate: () => void;
+  onChangeCommanderDamage: (fromOpponentId: string, delta: number) => void;
+  onChangePoison: (delta: number) => void;
+  onChangeRadiation: (delta: number) => void;
 }) {
   const lifeColor =
     player.life <= 0
@@ -71,6 +90,32 @@ export default function PlayerCard({
         className={`flex flex-1 items-center justify-center text-center text-6xl font-black tabular-nums ${lifeColor}`}
       >
         {player.life}
+      </div>
+
+      <div className="mb-2 flex gap-1 overflow-x-auto">
+        {opponents.map((o) => (
+          <CounterChip
+            key={o.id}
+            label={o.name}
+            value={o.amount}
+            disabled={player.eliminated}
+            onChange={(delta) => onChangeCommanderDamage(o.id, delta)}
+          />
+        ))}
+        <CounterChip
+          label="☠"
+          value={poison}
+          color="poison"
+          disabled={player.eliminated}
+          onChange={onChangePoison}
+        />
+        <CounterChip
+          label="☢"
+          value={radiation}
+          color="radiation"
+          disabled={player.eliminated}
+          onChange={onChangeRadiation}
+        />
       </div>
 
       <div className="grid grid-cols-4 gap-2">

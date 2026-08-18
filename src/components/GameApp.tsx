@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   COMMANDER_DAMAGE_LETHAL,
+  POISON_LETHAL,
   makeEmptyDamage,
   makePlayers,
   type PodSelection,
@@ -16,20 +17,20 @@ import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
-import DamageView from "@/components/DamageView";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
 import StatsScreen from "@/components/StatsScreen";
 
-type View = "life" | "damage";
 type HomeScreen = "welcome" | "newGame" | "library" | "stats";
+type CounterMap = Record<string, number>;
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [homeScreen, setHomeScreen] = useState<HomeScreen>("welcome");
   const [damage, setDamage] = useState<Record<string, Record<string, number>>>({});
-  const [view, setView] = useState<View>("life");
+  const [poison, setPoison] = useState<CounterMap>({});
+  const [radiation, setRadiation] = useState<CounterMap>({});
   const [firstPlayerId, setFirstPlayerId] = useState<string | null>(null);
   const [showRandomizer, setShowRandomizer] = useState(false);
   const [eliminationOrder, setEliminationOrder] = useState<string[]>([]);
@@ -56,9 +57,10 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     const newPlayers = makePlayers(selections);
     setPlayers(newPlayers);
     setDamage(makeEmptyDamage(newPlayers));
+    setPoison(Object.fromEntries(newPlayers.map((p) => [p.id, 0])));
+    setRadiation(Object.fromEntries(newPlayers.map((p) => [p.id, 0])));
     setFirstPlayerId(null);
     setEliminationOrder([]);
-    setView("life");
 
     const template = getLayoutTemplate(newPlayers.length);
     const initialRotations: Record<string, Rotation> = {};
@@ -79,6 +81,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   function resetToSetup() {
     setPlayers(null);
     setDamage({});
+    setPoison({});
+    setRadiation({});
     setFirstPlayerId(null);
     setEliminationOrder([]);
     setShowEndGame(false);
@@ -121,6 +125,14 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         [fromId]: { ...prev[fromId], [toId]: next },
       };
     });
+  }
+
+  function changePoison(id: string, delta: number) {
+    setPoison((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }));
+  }
+
+  function changeRadiation(id: string, delta: number) {
+    setRadiation((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }));
   }
 
   function placementsFor(winnerId: string): Record<string, number> {
@@ -223,24 +235,6 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         >
           🏁 End
         </button>
-        <div className="flex gap-1 rounded-full bg-neutral-900 p-1">
-          <button
-            onClick={() => setView("life")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-              view === "life" ? "bg-indigo-500 text-white" : "text-neutral-400"
-            }`}
-          >
-            Life
-          </button>
-          <button
-            onClick={() => setView("damage")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-              view === "damage" ? "bg-indigo-500 text-white" : "text-neutral-400"
-            }`}
-          >
-            Damage
-          </button>
-        </div>
         <button
           onClick={() => setShowRandomizer(true)}
           className="text-sm font-semibold text-emerald-400"
@@ -249,43 +243,48 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         </button>
       </header>
 
-      {view === "life" ? (
-        <div
-          className="flex-1 gap-3 p-3"
-          style={{
-            display: "grid",
-            gridTemplateColumns: layoutTemplate.columns,
-            gridTemplateRows: layoutTemplate.rows,
-            gridTemplateAreas: gridTemplateAreas(layoutTemplate),
-          }}
-        >
-          {players.map((p, i) => (
-            <RotatableCard
-              key={p.id}
-              rotation={rotations[p.id] ?? 0}
-              style={{ gridArea: layoutTemplate.placements[i]?.area }}
-            >
-              <PlayerCard
-                player={p}
-                isFirst={p.id === firstPlayerId}
-                isLethal={
-                  p.life <= 0 ||
-                  (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL
-                }
-                onChangeLife={(delta) => changeLife(p.id, delta)}
-                onToggleEliminate={() => toggleEliminate(p.id)}
-                onRotate={() => rotatePlayer(p.id)}
-              />
-            </RotatableCard>
-          ))}
-        </div>
-      ) : (
-        <DamageView
-          players={players}
-          damage={damage}
-          onChangeDamage={changeDamage}
-        />
-      )}
+      <div
+        className="flex-1 gap-3 p-3"
+        style={{
+          display: "grid",
+          gridTemplateColumns: layoutTemplate.columns,
+          gridTemplateRows: layoutTemplate.rows,
+          gridTemplateAreas: gridTemplateAreas(layoutTemplate),
+        }}
+      >
+        {players.map((p, i) => (
+          <RotatableCard
+            key={p.id}
+            rotation={rotations[p.id] ?? 0}
+            style={{ gridArea: layoutTemplate.placements[i]?.area }}
+          >
+            <PlayerCard
+              player={p}
+              isFirst={p.id === firstPlayerId}
+              isLethal={
+                p.life <= 0 ||
+                (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL ||
+                (poison[p.id] ?? 0) >= POISON_LETHAL
+              }
+              opponents={players
+                .filter((o) => o.id !== p.id)
+                .map((o) => ({
+                  id: o.id,
+                  name: o.name,
+                  amount: damage[o.id]?.[p.id] ?? 0,
+                }))}
+              poison={poison[p.id] ?? 0}
+              radiation={radiation[p.id] ?? 0}
+              onChangeLife={(delta) => changeLife(p.id, delta)}
+              onToggleEliminate={() => toggleEliminate(p.id)}
+              onRotate={() => rotatePlayer(p.id)}
+              onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
+              onChangePoison={(delta) => changePoison(p.id, delta)}
+              onChangeRadiation={(delta) => changeRadiation(p.id, delta)}
+            />
+          </RotatableCard>
+        ))}
+      </div>
 
       {showRandomizer && (
         <FirstPlayerRandomizer

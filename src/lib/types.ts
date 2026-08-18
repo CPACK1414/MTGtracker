@@ -19,6 +19,7 @@ export type PodSelection = {
 
 export const STARTING_LIFE = 40;
 export const COMMANDER_DAMAGE_LETHAL = 21;
+export const POISON_LETHAL = 10;
 
 export const MIN_POD_SIZE = 2;
 export const MAX_POD_SIZE = 8;
