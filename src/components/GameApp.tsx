@@ -15,12 +15,14 @@ import PlayerCard from "@/components/PlayerCard";
 import DamageView from "@/components/DamageView";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
+import StatsScreen from "@/components/StatsScreen";
 
 type View = "life" | "damage";
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
+  const [showStats, setShowStats] = useState(false);
   const [damage, setDamage] = useState<Record<string, Record<string, number>>>({});
   const [view, setView] = useState<View>("life");
   const [firstPlayerId, setFirstPlayerId] = useState<string | null>(null);
@@ -156,11 +158,15 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   if (!players) {
+    if (showStats) {
+      return <StatsScreen onBack={() => setShowStats(false)} />;
+    }
     return (
       <PlayerLibraryScreen
         players={libraryPlayers}
         onChangePlayers={setLibraryPlayers}
         onStart={startGame}
+        onShowStats={() => setShowStats(true)}
       />
     );
   }

@@ -17,10 +17,12 @@ export default function PlayerLibraryScreen({
   players,
   onChangePlayers,
   onStart,
+  onShowStats,
 }: {
   players: PlayerProfile[];
   onChangePlayers: (updater: (prev: PlayerProfile[]) => PlayerProfile[]) => void;
   onStart: (selections: PodSelection[]) => void;
+  onShowStats: () => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
@@ -130,11 +132,22 @@ export default function PlayerLibraryScreen({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="px-4 pt-6 pb-3 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">Commander Life Tracker</h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          Pick 2–8 players for this pod, and a deck for each
-        </p>
+      <div className="flex items-start justify-between px-4 pt-6 pb-3">
+        <div className="flex-1" />
+        <div className="flex-1 text-center">
+          <h1 className="text-2xl font-bold tracking-tight">Commander Life Tracker</h1>
+          <p className="mt-1 text-sm text-neutral-400">
+            Pick 2–8 players for this pod, and a deck for each
+          </p>
+        </div>
+        <div className="flex flex-1 justify-end">
+          <button
+            onClick={onShowStats}
+            className="text-sm font-semibold text-neutral-400"
+          >
+            📊 Stats
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">

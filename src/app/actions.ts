@@ -142,3 +142,120 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
 
   return { id: game.id };
 }
+
+export type PlayerStats = {
+  id: string;
+  name: string;
+  gamesPlayed: number;
+  wins: number;
+  winRate: number;
+};
+
+export type DeckStats = {
+  id: string;
+  name: string;
+  playerName: string;
+  commander: string | null;
+  gamesPlayed: number;
+  wins: number;
+  winRate: number;
+};
+
+export type DeckMatchup = {
+  deckAId: string;
+  deckAName: string;
+  deckAPlayerName: string;
+  deckBId: string;
+  deckBName: string;
+  deckBPlayerName: string;
+  aWins: number;
+  bWins: number;
+};
+
+export type ReportingData = {
+  players: PlayerStats[];
+  decks: DeckStats[];
+  matchups: DeckMatchup[];
+};
+
+export async function getReportingData(): Promise<ReportingData> {
+  const [allPlayers, allDecks, allGames, allParticipants] = await Promise.all([
+    db.select().from(players),
+    db.select().from(decks),
+    db.select().from(games),
+    db.select().from(gameParticipants),
+  ]);
+
+  const decksById = new Map(allDecks.map((d) => [d.id, d]));
+  const playersById = new Map(allPlayers.map((p) => [p.id, p]));
+
+  const playerStats: PlayerStats[] = allPlayers
+    .map((p) => {
+      const played = allParticipants.filter((gp) => gp.playerId === p.id);
+      const wins = allGames.filter((g) => g.winnerPlayerId === p.id).length;
+      return {
+        id: p.id,
+        name: p.name,
+        gamesPlayed: played.length,
+        wins,
+        winRate: played.length ? wins / played.length : 0,
+      };
+    })
+    .filter((p) => p.gamesPlayed > 0)
+    .sort((a, b) => b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed);
+
+  const deckStats: DeckStats[] = allDecks
+    .map((d) => {
+      const played = allParticipants.filter((gp) => gp.deckId === d.id);
+      const wins = allGames.filter((g) => g.winnerDeckId === d.id).length;
+      return {
+        id: d.id,
+        name: d.name,
+        playerName: playersById.get(d.playerId)?.name ?? "Unknown",
+        commander: d.commander,
+        gamesPlayed: played.length,
+        wins,
+        winRate: played.length ? wins / played.length : 0,
+      };
+    })
+    .filter((d) => d.gamesPlayed > 0)
+    .sort((a, b) => b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed);
+
+  const matchupMap = new Map<string, DeckMatchup>();
+  for (const game of allGames) {
+    if (!game.winnerDeckId) continue;
+    const gp = allParticipants.filter((p) => p.gameId === game.id);
+    const distinctDecks = new Set(
+      gp.map((p) => p.deckId).filter((x): x is string => Boolean(x))
+    );
+    if (distinctDecks.size < 2) continue;
+
+    for (const p of gp) {
+      if (!p.deckId || p.deckId === game.winnerDeckId) continue;
+      const [a, b] = [game.winnerDeckId, p.deckId].sort();
+      const key = `${a}|${b}`;
+      let m = matchupMap.get(key);
+      if (!m) {
+        m = {
+          deckAId: a,
+          deckAName: decksById.get(a)?.name ?? "Unknown deck",
+          deckAPlayerName: playersById.get(decksById.get(a)?.playerId ?? "")?.name ?? "",
+          deckBId: b,
+          deckBName: decksById.get(b)?.name ?? "Unknown deck",
+          deckBPlayerName: playersById.get(decksById.get(b)?.playerId ?? "")?.name ?? "",
+          aWins: 0,
+          bWins: 0,
+        };
+        matchupMap.set(key, m);
+      }
+      if (a === game.winnerDeckId) m.aWins += 1;
+      else m.bWins += 1;
+    }
+  }
+
+  const matchups = Array.from(matchupMap.values()).sort(
+    (a, b) => b.aWins + b.bWins - (a.aWins + a.bWins)
+  );
+
+  return { players: playerStats, decks: deckStats, matchups };
+}
