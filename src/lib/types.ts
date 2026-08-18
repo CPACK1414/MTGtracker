@@ -1,6 +1,7 @@
 export type Player = {
   id: string;
   profileId: string;
+  deckId: string | null;
   name: string;
   deckName?: string;
   commander?: string;
@@ -26,6 +27,7 @@ export function makePlayers(selections: PodSelection[]): Player[] {
   return selections.map((s) => ({
     id: s.profileId,
     profileId: s.profileId,
+    deckId: s.deckId,
     name: s.name,
     deckName: s.deckName,
     commander: s.commander,

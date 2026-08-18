@@ -1,34 +1,56 @@
 "use client";
 
-import { useState } from "react";
-import { newDeck, newPlayerProfile, usePlayerLibrary } from "@/lib/library";
+import { useState, useTransition } from "react";
+import type { PlayerProfile } from "@/lib/library";
 import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
 import PlayerRow from "@/components/PlayerRow";
+import {
+  createDeck,
+  createPlayer,
+  deleteDeck,
+  deletePlayer,
+  renamePlayer,
+  updateDeck,
+} from "@/app/actions";
 
 export default function PlayerLibraryScreen({
+  players,
+  onChangePlayers,
   onStart,
 }: {
+  players: PlayerProfile[];
+  onChangePlayers: (updater: (prev: PlayerProfile[]) => PlayerProfile[]) => void;
   onStart: (selections: PodSelection[]) => void;
 }) {
-  const { players, setPlayers, loaded } = usePlayerLibrary();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
   const [newName, setNewName] = useState("");
+  const [, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  function addPlayer() {
+  async function addPlayer() {
     const name = newName.trim();
     if (!name) return;
-    setPlayers((prev) => [...prev, newPlayerProfile(name)]);
     setNewName("");
+    const created = await createPlayer(name);
+    onChangePlayers((prev) => [...prev, created]);
   }
 
-  function removePlayer(id: string) {
-    setPlayers((prev) => prev.filter((p) => p.id !== id));
+  async function removePlayer(id: string) {
     setSelectedIds((prev) => prev.filter((x) => x !== id));
+    try {
+      await deletePlayer(id);
+      onChangePlayers((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't delete player.");
+    }
   }
 
-  function renamePlayer(id: string, name: string) {
-    setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
+  function handleRename(id: string, name: string) {
+    onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
+    startTransition(() => {
+      renamePlayer(id, name);
+    });
   }
 
   function toggleSelect(id: string) {
@@ -39,11 +61,10 @@ export default function PlayerLibraryScreen({
     });
   }
 
-  function addDeck(playerId: string, name: string, commander: string, colors: string) {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === playerId ? { ...p, decks: [...p.decks, newDeck(name, commander, colors)] } : p
-      )
+  async function addDeck(playerId: string, name: string, commander: string, colors: string) {
+    const deck = await createDeck(playerId, name, commander, colors);
+    onChangePlayers((prev) =>
+      prev.map((p) => (p.id === playerId ? { ...p, decks: [...p.decks, deck] } : p))
     );
   }
 
@@ -54,29 +75,37 @@ export default function PlayerLibraryScreen({
     commander: string,
     colors: string
   ) {
-    setPlayers((prev) =>
+    onChangePlayers((prev) =>
       prev.map((p) =>
         p.id === playerId
           ? {
               ...p,
               decks: p.decks.map((d) =>
                 d.id === deckId
-                  ? { ...d, name, commander: commander || undefined, colors: colors || undefined }
+                  ? { ...d, name, commander: commander || null, colors: colors || null }
                   : d
               ),
             }
           : p
       )
     );
+    startTransition(() => {
+      updateDeck(deckId, name, commander, colors);
+    });
   }
 
-  function removeDeck(playerId: string, deckId: string) {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === playerId ? { ...p, decks: p.decks.filter((d) => d.id !== deckId) } : p
-      )
-    );
-    setDeckChoice((prev) => (prev[playerId] === deckId ? { ...prev, [playerId]: null } : prev));
+  async function removeDeck(playerId: string, deckId: string) {
+    try {
+      await deleteDeck(deckId);
+      onChangePlayers((prev) =>
+        prev.map((p) =>
+          p.id === playerId ? { ...p, decks: p.decks.filter((d) => d.id !== deckId) } : p
+        )
+      );
+      setDeckChoice((prev) => (prev[playerId] === deckId ? { ...prev, [playerId]: null } : prev));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't delete deck.");
+    }
   }
 
   function handleStart() {
@@ -91,7 +120,7 @@ export default function PlayerLibraryScreen({
           name: p.name,
           deckId: dId,
           deckName: deck?.name,
-          commander: deck?.commander,
+          commander: deck?.commander ?? undefined,
         };
       });
     onStart(selections);
@@ -109,7 +138,16 @@ export default function PlayerLibraryScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {loaded && players.length === 0 && (
+        {error && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-red-950 px-3 py-2 text-sm text-red-300">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="shrink-0 font-bold">
+              ✕
+            </button>
+          </div>
+        )}
+
+        {players.length === 0 && (
           <p className="mb-3 text-center text-sm text-neutral-500">
             No players yet — add everyone in your group below.
           </p>
@@ -124,7 +162,7 @@ export default function PlayerLibraryScreen({
               deckId={deckChoice[p.id] ?? null}
               onToggleSelect={() => toggleSelect(p.id)}
               onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
-              onRename={(name) => renamePlayer(p.id, name)}
+              onRename={(name) => handleRename(p.id, name)}
               onDelete={() => removePlayer(p.id)}
               onAddDeck={(name, commander, colors) => addDeck(p.id, name, commander, colors)}
               onEditDeck={(deckId, name, commander, colors) =>

@@ -6,7 +6,7 @@ const COLOR_STYLES: Record<string, string> = {
   G: "bg-emerald-500",
 };
 
-export default function ColorPips({ colors }: { colors?: string }) {
+export default function ColorPips({ colors }: { colors?: string | null }) {
   if (!colors) return null;
   const letters = colors
     .toUpperCase()

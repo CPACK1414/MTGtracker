@@ -8,19 +8,27 @@ import {
   type PodSelection,
   type Player,
 } from "@/lib/types";
+import type { PlayerProfile } from "@/lib/library";
+import { saveGame } from "@/app/actions";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard from "@/components/PlayerCard";
 import DamageView from "@/components/DamageView";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
+import EndGameModal from "@/components/EndGameModal";
 
 type View = "life" | "damage";
 
-export default function GameApp() {
+export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
+  const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [damage, setDamage] = useState<Record<string, Record<string, number>>>({});
   const [view, setView] = useState<View>("life");
   const [firstPlayerId, setFirstPlayerId] = useState<string | null>(null);
   const [showRandomizer, setShowRandomizer] = useState(false);
+  const [eliminationOrder, setEliminationOrder] = useState<string[]>([]);
+  const [showEndGame, setShowEndGame] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
@@ -41,13 +49,17 @@ export default function GameApp() {
     setPlayers(newPlayers);
     setDamage(makeEmptyDamage(newPlayers));
     setFirstPlayerId(null);
+    setEliminationOrder([]);
     setView("life");
   }
 
-  function endGame() {
+  function resetToSetup() {
     setPlayers(null);
     setDamage({});
     setFirstPlayerId(null);
+    setEliminationOrder([]);
+    setShowEndGame(false);
+    setSaveError(null);
   }
 
   function changeLife(id: string, delta: number) {
@@ -59,13 +71,20 @@ export default function GameApp() {
   }
 
   function toggleEliminate(id: string) {
-    setPlayers((prev) =>
-      prev
-        ? prev.map((p) =>
-            p.id === id ? { ...p, eliminated: !p.eliminated } : p
-          )
-        : prev
-    );
+    setPlayers((prev) => {
+      if (!prev) return prev;
+      const target = prev.find((p) => p.id === id);
+      if (!target) return prev;
+      const nowEliminated = !target.eliminated;
+      setEliminationOrder((order) =>
+        nowEliminated
+          ? order.includes(id)
+            ? order
+            : [...order, id]
+          : order.filter((x) => x !== id)
+      );
+      return prev.map((p) => (p.id === id ? { ...p, eliminated: nowEliminated } : p));
+    });
   }
 
   function changeDamage(fromId: string, toId: string, delta: number) {
@@ -79,18 +98,81 @@ export default function GameApp() {
     });
   }
 
+  function placementsFor(winnerId: string): Record<string, number> {
+    if (!players) return {};
+    const others = players.filter((p) => p.id !== winnerId);
+    const alive = others
+      .filter((p) => !p.eliminated)
+      .sort((a, b) => b.life - a.life);
+    const eliminated = others
+      .filter((p) => p.eliminated)
+      .sort((a, b) => eliminationOrder.indexOf(b.id) - eliminationOrder.indexOf(a.id));
+    const ordered = [...alive, ...eliminated];
+
+    const placements: Record<string, number> = { [winnerId]: 1 };
+    ordered.forEach((p, i) => {
+      placements[p.id] = i + 2;
+    });
+    return placements;
+  }
+
+  async function handleEndGame(winnerId: string) {
+    if (!players) return;
+    setSaving(true);
+    setSaveError(null);
+
+    const placements = placementsFor(winnerId);
+    const winner = players.find((p) => p.id === winnerId)!;
+
+    const damageRows: { fromPlayerId: string; toPlayerId: string; amount: number }[] = [];
+    for (const from of players) {
+      for (const to of players) {
+        if (from.id === to.id) continue;
+        const amount = damage[from.id]?.[to.id] ?? 0;
+        if (amount > 0) damageRows.push({ fromPlayerId: from.id, toPlayerId: to.id, amount });
+      }
+    }
+
+    try {
+      await saveGame({
+        podSize: players.length,
+        winnerPlayerId: winner.profileId,
+        winnerDeckId: winner.deckId,
+        participants: players.map((p, i) => ({
+          playerId: p.profileId,
+          deckId: p.deckId,
+          seatOrder: i + 1,
+          finalLife: p.life,
+          placement: placements[p.id],
+        })),
+        damage: damageRows,
+      });
+      resetToSetup();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Couldn't save the game. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!players) {
-    return <PlayerLibraryScreen onStart={startGame} />;
+    return (
+      <PlayerLibraryScreen
+        players={libraryPlayers}
+        onChangePlayers={setLibraryPlayers}
+        onStart={startGame}
+      />
+    );
   }
 
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
         <button
-          onClick={endGame}
+          onClick={() => setShowEndGame(true)}
           className="text-sm font-semibold text-neutral-400"
         >
-          ← New Pod
+          🏁 End
         </button>
         <div className="flex gap-1 rounded-full bg-neutral-900 p-1">
           <button
@@ -147,6 +229,19 @@ export default function GameApp() {
           players={players}
           onPicked={setFirstPlayerId}
           onClose={() => setShowRandomizer(false)}
+        />
+      )}
+
+      {showEndGame && (
+        <EndGameModal
+          players={players}
+          saving={saving}
+          error={saveError}
+          onCancel={() => {
+            setShowEndGame(false);
+            setSaveError(null);
+          }}
+          onConfirm={handleEndGame}
         />
       )}
     </div>
