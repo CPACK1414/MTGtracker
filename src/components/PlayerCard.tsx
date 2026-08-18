@@ -1,7 +1,6 @@
 "use client";
 
 import type { Player } from "@/lib/types";
-import type { QuadrantBucket } from "@/lib/layout";
 import CounterChip from "@/components/CounterChip";
 import CounterBadge from "@/components/CounterBadge";
 import DamageGrid from "@/components/DamageGrid";
@@ -17,7 +16,7 @@ export default function PlayerCard({
   isLethal,
   isFirst,
   singleOpponent,
-  damageBuckets,
+  groupOpponents,
   poison,
   radiation,
   onChangeLife,
@@ -30,7 +29,7 @@ export default function PlayerCard({
   isLethal: boolean;
   isFirst: boolean;
   singleOpponent?: OpponentDamage;
-  damageBuckets?: Record<QuadrantBucket, OpponentDamage[]>;
+  groupOpponents?: OpponentDamage[];
   poison: number;
   radiation: number;
   onChangeLife: (delta: number) => void;
@@ -65,9 +64,9 @@ export default function PlayerCard({
         </div>
       )}
 
-      {!singleOpponent && damageBuckets && (
+      {!singleOpponent && groupOpponents && (
         <div className="mb-1 flex justify-center">
-          <DamageGrid buckets={damageBuckets} onOpen={onOpenCounters} />
+          <DamageGrid opponents={groupOpponents} onOpen={onOpenCounters} />
         </div>
       )}
 

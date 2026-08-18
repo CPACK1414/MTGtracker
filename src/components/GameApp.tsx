@@ -11,13 +11,7 @@ import {
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
 import { saveGame } from "@/app/actions";
-import {
-  getLayoutTemplate,
-  gridTemplateAreas,
-  getQuadrant,
-  type Rotation,
-  type QuadrantBucket,
-} from "@/lib/layout";
+import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
@@ -30,13 +24,6 @@ import StatsScreen from "@/components/StatsScreen";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats";
 type CounterMap = Record<string, number>;
-
-const EMPTY_BUCKETS: Record<QuadrantBucket, OpponentDamage[]> = {
-  topLeft: [],
-  topRight: [],
-  bottomLeft: [],
-  bottomRight: [],
-};
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
@@ -275,22 +262,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
             .map((o) => ({ id: o.id, name: o.name, amount: damage[o.id]?.[p.id] ?? 0 }));
 
           const singleOpponent = players.length === 2 ? opponents[0] : undefined;
-
-          let damageBuckets: Record<QuadrantBucket, OpponentDamage[]> | undefined;
-          if (players.length > 2 && myPlacement) {
-            damageBuckets = { topLeft: [], topRight: [], bottomLeft: [], bottomRight: [] };
-            players.forEach((o, j) => {
-              if (o.id === p.id) return;
-              const theirPlacement = layoutTemplate.placements[j];
-              if (!theirPlacement) return;
-              const bucket = getQuadrant(myPlacement, theirPlacement);
-              damageBuckets![bucket].push({
-                id: o.id,
-                name: o.name,
-                amount: damage[o.id]?.[p.id] ?? 0,
-              });
-            });
-          }
+          const groupOpponents = players.length > 2 ? opponents : undefined;
 
           return (
             <RotatableCard
@@ -307,7 +279,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
                   (poison[p.id] ?? 0) >= POISON_LETHAL
                 }
                 singleOpponent={singleOpponent}
-                damageBuckets={damageBuckets ?? EMPTY_BUCKETS}
+                groupOpponents={groupOpponents}
                 poison={poison[p.id] ?? 0}
                 radiation={radiation[p.id] ?? 0}
                 onChangeLife={(delta) => changeLife(p.id, delta)}
