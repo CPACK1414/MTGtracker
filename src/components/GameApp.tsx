@@ -21,6 +21,7 @@ import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
 import CounterModal from "@/components/CounterModal";
 import StatsScreen from "@/components/StatsScreen";
+import GameTimer from "@/components/GameTimer";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats";
 type CounterMap = Record<string, number>;
@@ -40,6 +41,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [saveError, setSaveError] = useState<string | null>(null);
   const [rotations, setRotations] = useState<Record<string, Rotation>>({});
   const [counterModalPlayerId, setCounterModalPlayerId] = useState<string | null>(null);
+  const [gameStartedAt, setGameStartedAt] = useState<number | null>(null);
 
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
@@ -70,6 +72,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       initialRotations[p.id] = template.placements[i]?.rotation ?? 0;
     });
     setRotations(initialRotations);
+    setGameStartedAt(Date.now());
   }
 
   function rotatePlayer(id: string) {
@@ -91,6 +94,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setSaveError(null);
     setRotations({});
     setCounterModalPlayerId(null);
+    setGameStartedAt(null);
     setHomeScreen("welcome");
   }
 
@@ -241,16 +245,17 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
+      <header className="grid grid-cols-3 items-center gap-2 border-b border-neutral-800 px-4 py-3">
         <button
           onClick={() => setShowEndGame(true)}
-          className="text-sm font-semibold text-neutral-400"
+          className="justify-self-start text-sm font-semibold text-neutral-400"
         >
           🏁 End
         </button>
+        {gameStartedAt && <GameTimer startedAt={gameStartedAt} />}
         <button
           onClick={() => setShowRandomizer(true)}
-          className="text-sm font-semibold text-emerald-400"
+          className="justify-self-end text-sm font-semibold text-emerald-400"
         >
           🎲 First
         </button>
