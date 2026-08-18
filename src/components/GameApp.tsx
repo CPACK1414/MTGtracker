@@ -120,14 +120,19 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   function changeDamage(fromId: string, toId: string, delta: number) {
+    const current = damage[fromId]?.[toId] ?? 0;
+    const next = Math.max(0, current + delta);
+    const actualDelta = next - current;
+    if (actualDelta === 0) return;
+
     setDamage((prev) => {
-      const current = prev[fromId]?.[toId] ?? 0;
-      const next = Math.max(0, current + delta);
+      const prevCurrent = prev[fromId]?.[toId] ?? 0;
       return {
         ...prev,
-        [fromId]: { ...prev[fromId], [toId]: next },
+        [fromId]: { ...prev[fromId], [toId]: prevCurrent + actualDelta },
       };
     });
+    changeLife(toId, -actualDelta);
   }
 
   function changePoison(id: string, delta: number) {
