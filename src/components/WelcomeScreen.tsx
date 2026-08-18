@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 export default function WelcomeScreen({
   onNewGame,
   onLibrary,
@@ -21,7 +23,15 @@ export default function WelcomeScreen({
           onClick={onNewGame}
           className="flex items-center gap-4 rounded-2xl bg-emerald-500 px-6 py-5 text-left shadow-lg shadow-emerald-500/20 active:scale-95"
         >
-          <span className="text-3xl">🎲</span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+            <Image
+              src="/mtg-logo.png"
+              alt=""
+              width={22}
+              height={36}
+              className="h-9 w-auto object-contain"
+            />
+          </span>
           <span>
             <span className="block text-lg font-bold text-white">New Game</span>
             <span className="block text-sm text-emerald-950/70">
@@ -34,7 +44,7 @@ export default function WelcomeScreen({
           onClick={onLibrary}
           className="flex items-center gap-4 rounded-2xl bg-neutral-800 px-6 py-5 text-left active:scale-95"
         >
-          <span className="text-3xl">👥</span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-3xl">👥</span>
           <span>
             <span className="block text-lg font-bold text-white">Players &amp; Decks</span>
             <span className="block text-sm text-neutral-400">
@@ -47,7 +57,7 @@ export default function WelcomeScreen({
           onClick={onStats}
           className="flex items-center gap-4 rounded-2xl bg-neutral-800 px-6 py-5 text-left active:scale-95"
         >
-          <span className="text-3xl">📊</span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-3xl">🏆</span>
           <span>
             <span className="block text-lg font-bold text-white">Stats</span>
             <span className="block text-sm text-neutral-400">
