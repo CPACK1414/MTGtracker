@@ -7,10 +7,6 @@ import ColorPips from "@/components/ColorPips";
 
 export default function PlayerRow({
   player,
-  selected,
-  deckId,
-  onToggleSelect,
-  onSelectDeck,
   onRename,
   onDelete,
   onAddDeck,
@@ -18,10 +14,6 @@ export default function PlayerRow({
   onRemoveDeck,
 }: {
   player: PlayerProfile;
-  selected: boolean;
-  deckId: string | null;
-  onToggleSelect: () => void;
-  onSelectDeck: (deckId: string | null) => void;
   onRename: (name: string) => void;
   onDelete: () => void;
   onAddDeck: (name: string, commander: string, colors: string) => void;
@@ -37,16 +29,6 @@ export default function PlayerRow({
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900">
       <div className="flex items-center gap-3 p-3">
-        <button
-          onClick={onToggleSelect}
-          aria-label={selected ? "Deselect player" : "Select player"}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-bold active:scale-95 ${
-            selected ? "bg-emerald-500 text-white" : "bg-neutral-800 text-neutral-600"
-          }`}
-        >
-          {selected ? "✓" : ""}
-        </button>
-
         {renaming ? (
           <input
             autoFocus
@@ -86,24 +68,6 @@ export default function PlayerRow({
           🗑
         </button>
       </div>
-
-      {selected && (
-        <div className="px-3 pb-3">
-          <select
-            value={deckId ?? ""}
-            onChange={(e) => onSelectDeck(e.target.value || null)}
-            className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none"
-          >
-            <option value="">No deck</option>
-            {player.decks.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-                {d.commander ? ` — ${d.commander}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {expanded && (
         <div className="flex flex-col gap-2 border-t border-neutral-800 p-3">

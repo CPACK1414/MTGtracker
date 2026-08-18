@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import type { PlayerProfile } from "@/lib/library";
-import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
 import PlayerRow from "@/components/PlayerRow";
 import {
   createDeck,
@@ -16,16 +15,12 @@ import {
 export default function PlayerLibraryScreen({
   players,
   onChangePlayers,
-  onStart,
-  onShowStats,
+  onBack,
 }: {
   players: PlayerProfile[];
   onChangePlayers: (updater: (prev: PlayerProfile[]) => PlayerProfile[]) => void;
-  onStart: (selections: PodSelection[]) => void;
-  onShowStats: () => void;
+  onBack: () => void;
 }) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
   const [newName, setNewName] = useState("");
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +34,6 @@ export default function PlayerLibraryScreen({
   }
 
   async function removePlayer(id: string) {
-    setSelectedIds((prev) => prev.filter((x) => x !== id));
     try {
       await deletePlayer(id);
       onChangePlayers((prev) => prev.filter((p) => p.id !== id));
@@ -52,14 +46,6 @@ export default function PlayerLibraryScreen({
     onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
     startTransition(() => {
       renamePlayer(id, name);
-    });
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= MAX_POD_SIZE) return prev;
-      return [...prev, id];
     });
   }
 
@@ -104,53 +90,22 @@ export default function PlayerLibraryScreen({
           p.id === playerId ? { ...p, decks: p.decks.filter((d) => d.id !== deckId) } : p
         )
       );
-      setDeckChoice((prev) => (prev[playerId] === deckId ? { ...prev, [playerId]: null } : prev));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't delete deck.");
     }
   }
 
-  function handleStart() {
-    const selections: PodSelection[] = selectedIds
-      .map((id) => players.find((p) => p.id === id))
-      .filter((p): p is NonNullable<typeof p> => Boolean(p))
-      .map((p) => {
-        const dId = deckChoice[p.id] ?? null;
-        const deck = dId ? p.decks.find((d) => d.id === dId) : undefined;
-        return {
-          profileId: p.id,
-          name: p.name,
-          deckId: dId,
-          deckName: deck?.name,
-          commander: deck?.commander ?? undefined,
-        };
-      });
-    onStart(selections);
-  }
-
-  const canStart = selectedIds.length >= MIN_POD_SIZE && selectedIds.length <= MAX_POD_SIZE;
-
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex items-start justify-between px-4 pt-6 pb-3">
-        <div className="flex-1" />
-        <div className="flex-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Commander Life Tracker</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            Pick 2–8 players for this pod, and a deck for each
-          </p>
-        </div>
-        <div className="flex flex-1 justify-end">
-          <button
-            onClick={onShowStats}
-            className="text-sm font-semibold text-neutral-400"
-          >
-            📊 Stats
-          </button>
-        </div>
-      </div>
+      <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
+        <button onClick={onBack} className="text-sm font-semibold text-neutral-400">
+          ← Back
+        </button>
+        <h1 className="text-base font-bold text-white">Players &amp; Decks</h1>
+        <span className="w-12" />
+      </header>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {error && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-red-950 px-3 py-2 text-sm text-red-300">
             <span>{error}</span>
@@ -171,10 +126,6 @@ export default function PlayerLibraryScreen({
             <PlayerRow
               key={p.id}
               player={p}
-              selected={selectedIds.includes(p.id)}
-              deckId={deckChoice[p.id] ?? null}
-              onToggleSelect={() => toggleSelect(p.id)}
-              onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
               onRename={(name) => handleRename(p.id, name)}
               onDelete={() => removePlayer(p.id)}
               onAddDeck={(name, commander, colors) => addDeck(p.id, name, commander, colors)}
@@ -202,20 +153,6 @@ export default function PlayerLibraryScreen({
             + Add
           </button>
         </div>
-      </div>
-
-      <div className="border-t border-neutral-800 px-4 py-4">
-        <button
-          disabled={!canStart}
-          onClick={handleStart}
-          className="w-full rounded-2xl bg-emerald-500 px-8 py-5 text-xl font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-30 disabled:shadow-none"
-        >
-          {selectedIds.length === 0
-            ? "Select players to start"
-            : canStart
-            ? `Start Game (${selectedIds.length})`
-            : `Max ${MAX_POD_SIZE} players`}
-        </button>
       </div>
     </div>
   );

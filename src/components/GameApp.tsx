@@ -10,6 +10,8 @@ import {
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
 import { saveGame } from "@/app/actions";
+import WelcomeScreen from "@/components/WelcomeScreen";
+import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard from "@/components/PlayerCard";
 import DamageView from "@/components/DamageView";
@@ -18,11 +20,12 @@ import EndGameModal from "@/components/EndGameModal";
 import StatsScreen from "@/components/StatsScreen";
 
 type View = "life" | "damage";
+type HomeScreen = "welcome" | "newGame" | "library" | "stats";
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
-  const [showStats, setShowStats] = useState(false);
+  const [homeScreen, setHomeScreen] = useState<HomeScreen>("welcome");
   const [damage, setDamage] = useState<Record<string, Record<string, number>>>({});
   const [view, setView] = useState<View>("life");
   const [firstPlayerId, setFirstPlayerId] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setEliminationOrder([]);
     setShowEndGame(false);
     setSaveError(null);
+    setHomeScreen("welcome");
   }
 
   function changeLife(id: string, delta: number) {
@@ -158,15 +162,33 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   if (!players) {
-    if (showStats) {
-      return <StatsScreen onBack={() => setShowStats(false)} />;
+    if (homeScreen === "newGame") {
+      return (
+        <PodSetupScreen
+          players={libraryPlayers}
+          onBack={() => setHomeScreen("welcome")}
+          onManagePlayers={() => setHomeScreen("library")}
+          onStart={startGame}
+        />
+      );
+    }
+    if (homeScreen === "library") {
+      return (
+        <PlayerLibraryScreen
+          players={libraryPlayers}
+          onChangePlayers={setLibraryPlayers}
+          onBack={() => setHomeScreen("welcome")}
+        />
+      );
+    }
+    if (homeScreen === "stats") {
+      return <StatsScreen onBack={() => setHomeScreen("welcome")} />;
     }
     return (
-      <PlayerLibraryScreen
-        players={libraryPlayers}
-        onChangePlayers={setLibraryPlayers}
-        onStart={startGame}
-        onShowStats={() => setShowStats(true)}
+      <WelcomeScreen
+        onNewGame={() => setHomeScreen("newGame")}
+        onLibrary={() => setHomeScreen("library")}
+        onStats={() => setHomeScreen("stats")}
       />
     );
   }

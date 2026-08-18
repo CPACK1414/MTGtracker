@@ -1,0 +1,110 @@
+"use client";
+
+import { useState } from "react";
+import type { PlayerProfile } from "@/lib/library";
+import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
+import PodPlayerRow from "@/components/PodPlayerRow";
+
+export default function PodSetupScreen({
+  players,
+  onBack,
+  onManagePlayers,
+  onStart,
+}: {
+  players: PlayerProfile[];
+  onBack: () => void;
+  onManagePlayers: () => void;
+  onStart: (selections: PodSelection[]) => void;
+}) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_POD_SIZE) return prev;
+      return [...prev, id];
+    });
+  }
+
+  function handleStart() {
+    const selections: PodSelection[] = selectedIds
+      .map((id) => players.find((p) => p.id === id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p))
+      .map((p) => {
+        const dId = deckChoice[p.id] ?? null;
+        const deck = dId ? p.decks.find((d) => d.id === dId) : undefined;
+        return {
+          profileId: p.id,
+          name: p.name,
+          deckId: dId,
+          deckName: deck?.name,
+          commander: deck?.commander ?? undefined,
+        };
+      });
+    onStart(selections);
+  }
+
+  const canStart = selectedIds.length >= MIN_POD_SIZE && selectedIds.length <= MAX_POD_SIZE;
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
+        <button onClick={onBack} className="text-sm font-semibold text-neutral-400">
+          ← Back
+        </button>
+        <h1 className="text-base font-bold text-white">New Game</h1>
+        <span className="w-12" />
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <p className="mb-3 text-center text-sm text-neutral-400">
+          Pick 2–8 players for this pod, and a deck for each
+        </p>
+
+        {players.length === 0 ? (
+          <div className="mt-6 flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-neutral-500">
+              No players yet — add everyone in your group first.
+            </p>
+            <button
+              onClick={onManagePlayers}
+              className="rounded-xl bg-neutral-800 px-4 py-3 text-sm font-semibold text-emerald-400 active:scale-95"
+            >
+              👥 Players &amp; Decks
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {players.map((p) => (
+              <PodPlayerRow
+                key={p.id}
+                player={p}
+                selected={selectedIds.includes(p.id)}
+                deckId={deckChoice[p.id] ?? null}
+                onToggleSelect={() => toggleSelect(p.id)}
+                onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {players.length > 0 && (
+        <div className="border-t border-neutral-800 px-4 py-4">
+          <button
+            disabled={!canStart}
+            onClick={handleStart}
+            className="w-full rounded-2xl bg-emerald-500 px-8 py-5 text-xl font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-30 disabled:shadow-none"
+          >
+            {selectedIds.length === 0
+              ? "Select players to start"
+              : canStart
+              ? `Start Game (${selectedIds.length})`
+              : `Max ${MAX_POD_SIZE} players`}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
