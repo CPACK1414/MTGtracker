@@ -1,8 +1,19 @@
 export type Player = {
   id: string;
+  profileId: string;
   name: string;
+  deckName?: string;
+  commander?: string;
   life: number;
   eliminated: boolean;
+};
+
+export type PodSelection = {
+  profileId: string;
+  name: string;
+  deckId: string | null;
+  deckName?: string;
+  commander?: string;
 };
 
 export const STARTING_LIFE = 40;
@@ -11,10 +22,13 @@ export const COMMANDER_DAMAGE_LETHAL = 21;
 export const MIN_POD_SIZE = 2;
 export const MAX_POD_SIZE = 8;
 
-export function makePlayers(count: number): Player[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `p${i + 1}-${Math.random().toString(36).slice(2, 8)}`,
-    name: `Player ${i + 1}`,
+export function makePlayers(selections: PodSelection[]): Player[] {
+  return selections.map((s) => ({
+    id: s.profileId,
+    profileId: s.profileId,
+    name: s.name,
+    deckName: s.deckName,
+    commander: s.commander,
     life: STARTING_LIFE,
     eliminated: false,
   }));

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Player } from "@/lib/types";
 
 export default function PlayerCard({
@@ -8,19 +7,14 @@ export default function PlayerCard({
   isLethal,
   isFirst,
   onChangeLife,
-  onRename,
   onToggleEliminate,
 }: {
   player: Player;
   isLethal: boolean;
   isFirst: boolean;
   onChangeLife: (delta: number) => void;
-  onRename: (name: string) => void;
   onToggleEliminate: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState(player.name);
-
   const lifeColor =
     player.life <= 0
       ? "text-red-500"
@@ -37,32 +31,17 @@ export default function PlayerCard({
       }`}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
-        {editing ? (
-          <input
-            autoFocus
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            onBlur={() => {
-              onRename(draftName.trim() || player.name);
-              setEditing(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-            }}
-            className="w-full rounded-lg bg-neutral-800 px-2 py-1 text-sm font-semibold text-white outline-none"
-          />
-        ) : (
-          <button
-            onClick={() => {
-              setDraftName(player.name);
-              setEditing(true);
-            }}
-            className="truncate text-sm font-semibold text-neutral-300"
-          >
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-neutral-300">
             {player.name}
             {isFirst && <span className="ml-1">🎲</span>}
-          </button>
-        )}
+          </p>
+          {(player.deckName || player.commander) && (
+            <p className="truncate text-xs text-neutral-500">
+              {player.commander || player.deckName}
+            </p>
+          )}
+        </div>
         <button
           onClick={onToggleEliminate}
           className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold ${

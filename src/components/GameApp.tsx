@@ -5,9 +5,10 @@ import {
   COMMANDER_DAMAGE_LETHAL,
   makeEmptyDamage,
   makePlayers,
+  type PodSelection,
   type Player,
 } from "@/lib/types";
-import PodSetup from "@/components/PodSetup";
+import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard from "@/components/PlayerCard";
 import DamageView from "@/components/DamageView";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
@@ -35,8 +36,8 @@ export default function GameApp() {
     return map;
   }, [players, damage]);
 
-  function startGame(podSize: number) {
-    const newPlayers = makePlayers(podSize);
+  function startGame(selections: PodSelection[]) {
+    const newPlayers = makePlayers(selections);
     setPlayers(newPlayers);
     setDamage(makeEmptyDamage(newPlayers));
     setFirstPlayerId(null);
@@ -54,12 +55,6 @@ export default function GameApp() {
       prev
         ? prev.map((p) => (p.id === id ? { ...p, life: p.life + delta } : p))
         : prev
-    );
-  }
-
-  function renamePlayer(id: string, name: string) {
-    setPlayers((prev) =>
-      prev ? prev.map((p) => (p.id === id ? { ...p, name } : p)) : prev
     );
   }
 
@@ -85,7 +80,7 @@ export default function GameApp() {
   }
 
   if (!players) {
-    return <PodSetup onStart={startGame} />;
+    return <PlayerLibraryScreen onStart={startGame} />;
   }
 
   return (
@@ -135,7 +130,6 @@ export default function GameApp() {
                 (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL
               }
               onChangeLife={(delta) => changeLife(p.id, delta)}
-              onRename={(name) => renamePlayer(p.id, name)}
               onToggleEliminate={() => toggleEliminate(p.id)}
             />
           ))}
