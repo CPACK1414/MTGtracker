@@ -41,15 +41,17 @@ export function getLayoutTemplate(count: number): LayoutTemplate {
   }
 
   if (count === 4) {
+    // Pinwheel: all four seats face sideways (no "near" seat stays
+    // upright) — left column faces right, right column faces left.
     return {
       columns: "1fr 1fr",
       rows: "1fr 1fr",
       areas: ["top-left top-right", "bottom-left bottom-right"],
       placements: [
-        { area: "bottom-left", rotation: 0 },
-        { area: "top-left", rotation: 180 },
-        { area: "top-right", rotation: 180 },
-        { area: "bottom-right", rotation: 0 },
+        { area: "bottom-left", rotation: 90 },
+        { area: "top-left", rotation: 90 },
+        { area: "top-right", rotation: 270 },
+        { area: "bottom-right", rotation: 270 },
       ],
     };
   }
