@@ -22,8 +22,13 @@ export default function PlayerLibraryScreen({
   onBack: () => void;
 }) {
   const [newName, setNewName] = useState("");
+  const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const filteredPlayers = players.filter((p) =>
+    p.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
 
   async function addPlayer() {
     const name = newName.trim();
@@ -121,8 +126,23 @@ export default function PlayerLibraryScreen({
           </p>
         )}
 
+        {players.length > 0 && (
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Search players"
+            className="mb-3 w-full rounded-xl bg-neutral-800 px-4 py-3 text-white outline-none placeholder:text-neutral-500"
+          />
+        )}
+
+        {players.length > 0 && filteredPlayers.length === 0 && (
+          <p className="mb-3 text-center text-sm text-neutral-500">
+            No players match &quot;{search}&quot;.
+          </p>
+        )}
+
         <div className="flex flex-col gap-2">
-          {players.map((p) => (
+          {filteredPlayers.map((p) => (
             <PlayerRow
               key={p.id}
               player={p}

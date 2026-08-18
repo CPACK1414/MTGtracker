@@ -20,6 +20,11 @@ export default function PodSetupScreen({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
   const [showSeats, setShowSeats] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredPlayers = players.filter((p) =>
+    p.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -86,18 +91,33 @@ export default function PodSetupScreen({
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {players.map((p) => (
-              <PodPlayerRow
-                key={p.id}
-                player={p}
-                selected={selectedIds.includes(p.id)}
-                deckId={deckChoice[p.id] ?? null}
-                onToggleSelect={() => toggleSelect(p.id)}
-                onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
-              />
-            ))}
-          </div>
+          <>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 Search players"
+              className="mb-3 w-full rounded-xl bg-neutral-800 px-4 py-3 text-white outline-none placeholder:text-neutral-500"
+            />
+
+            {filteredPlayers.length === 0 && (
+              <p className="mb-3 text-center text-sm text-neutral-500">
+                No players match &quot;{search}&quot;.
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {filteredPlayers.map((p) => (
+                <PodPlayerRow
+                  key={p.id}
+                  player={p}
+                  selected={selectedIds.includes(p.id)}
+                  deckId={deckChoice[p.id] ?? null}
+                  onToggleSelect={() => toggleSelect(p.id)}
+                  onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 

@@ -17,6 +17,7 @@ export default function SeatAssignScreen({
   const [seatPlayerIds, setSeatPlayerIds] = useState<(string | null)[]>(() =>
     selections.map(() => null)
   );
+  const sortedSelections = [...selections].sort((a, b) => a.name.localeCompare(b.name));
 
   function assign(seatIndex: number, profileId: string) {
     setSeatPlayerIds((prev) => {
@@ -95,7 +96,7 @@ export default function SeatAssignScreen({
                   <option value="" disabled>
                     Choose player
                   </option>
-                  {selections.map((s) => (
+                  {sortedSelections.map((s) => (
                     <option key={s.profileId} value={s.profileId}>
                       {s.name}
                     </option>

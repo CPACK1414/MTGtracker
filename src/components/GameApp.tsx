@@ -195,11 +195,16 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     }
   }
 
+  const sortedLibraryPlayers = useMemo(
+    () => [...libraryPlayers].sort((a, b) => a.name.localeCompare(b.name)),
+    [libraryPlayers]
+  );
+
   if (!players) {
     if (homeScreen === "newGame") {
       return (
         <PodSetupScreen
-          players={libraryPlayers}
+          players={sortedLibraryPlayers}
           onBack={() => setHomeScreen("welcome")}
           onManagePlayers={() => setHomeScreen("library")}
           onStart={startGame}
@@ -209,7 +214,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     if (homeScreen === "library") {
       return (
         <PlayerLibraryScreen
-          players={libraryPlayers}
+          players={sortedLibraryPlayers}
           onChangePlayers={setLibraryPlayers}
           onBack={() => setHomeScreen("welcome")}
         />
