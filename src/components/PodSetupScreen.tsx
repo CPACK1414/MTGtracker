@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { PlayerProfile } from "@/lib/library";
 import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
 import PodPlayerRow from "@/components/PodPlayerRow";
+import LayoutPreview from "@/components/LayoutPreview";
 
 export default function PodSetupScreen({
   players,
@@ -92,6 +93,7 @@ export default function PodSetupScreen({
 
       {players.length > 0 && (
         <div className="border-t border-neutral-800 px-4 py-4">
+          <LayoutPreview count={selectedIds.length} />
           <button
             disabled={!canStart}
             onClick={handleStart}

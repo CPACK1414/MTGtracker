@@ -10,10 +10,12 @@ import {
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
 import { saveGame } from "@/app/actions";
+import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard from "@/components/PlayerCard";
+import RotatableCard from "@/components/RotatableCard";
 import DamageView from "@/components/DamageView";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
@@ -34,6 +36,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [showEndGame, setShowEndGame] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [rotations, setRotations] = useState<Record<string, Rotation>>({});
 
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
@@ -56,6 +59,21 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setFirstPlayerId(null);
     setEliminationOrder([]);
     setView("life");
+
+    const template = getLayoutTemplate(newPlayers.length);
+    const initialRotations: Record<string, Rotation> = {};
+    newPlayers.forEach((p, i) => {
+      initialRotations[p.id] = template.placements[i]?.rotation ?? 0;
+    });
+    setRotations(initialRotations);
+  }
+
+  function rotatePlayer(id: string) {
+    setRotations((prev) => {
+      const current = prev[id] ?? 0;
+      const next = ((current + 90) % 360) as Rotation;
+      return { ...prev, [id]: next };
+    });
   }
 
   function resetToSetup() {
@@ -65,6 +83,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setEliminationOrder([]);
     setShowEndGame(false);
     setSaveError(null);
+    setRotations({});
     setHomeScreen("welcome");
   }
 
@@ -193,6 +212,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     );
   }
 
+  const layoutTemplate = getLayoutTemplate(players.length);
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
@@ -229,19 +250,33 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       </header>
 
       {view === "life" ? (
-        <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3 p-3">
-          {players.map((p) => (
-            <PlayerCard
+        <div
+          className="flex-1 gap-3 p-3"
+          style={{
+            display: "grid",
+            gridTemplateColumns: layoutTemplate.columns,
+            gridTemplateRows: layoutTemplate.rows,
+            gridTemplateAreas: gridTemplateAreas(layoutTemplate),
+          }}
+        >
+          {players.map((p, i) => (
+            <RotatableCard
               key={p.id}
-              player={p}
-              isFirst={p.id === firstPlayerId}
-              isLethal={
-                p.life <= 0 ||
-                (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL
-              }
-              onChangeLife={(delta) => changeLife(p.id, delta)}
-              onToggleEliminate={() => toggleEliminate(p.id)}
-            />
+              rotation={rotations[p.id] ?? 0}
+              style={{ gridArea: layoutTemplate.placements[i]?.area }}
+            >
+              <PlayerCard
+                player={p}
+                isFirst={p.id === firstPlayerId}
+                isLethal={
+                  p.life <= 0 ||
+                  (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL
+                }
+                onChangeLife={(delta) => changeLife(p.id, delta)}
+                onToggleEliminate={() => toggleEliminate(p.id)}
+                onRotate={() => rotatePlayer(p.id)}
+              />
+            </RotatableCard>
           ))}
         </div>
       ) : (
