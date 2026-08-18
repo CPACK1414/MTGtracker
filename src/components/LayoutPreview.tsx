@@ -29,7 +29,10 @@ export default function LayoutPreview({ count }: { count: number }) {
           >
             <span
               className="text-lg text-neutral-500"
-              style={{ display: "inline-block", transform: `rotate(${p.rotation}deg)` }}
+              style={{
+                display: "inline-block",
+                transform: `rotate(${(p.rotation + 180) % 360}deg)`,
+              }}
             >
               ▲
             </span>
