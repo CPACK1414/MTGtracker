@@ -1,0 +1,10 @@
+{
+  "name": "Commander Life Tracker",
+  "short_name": "CMDR Life",
+  "description": "Life and commander damage tracker for Commander pods",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f13",
+  "theme_color": "#0f0f13",
+  "icons": []
+}
