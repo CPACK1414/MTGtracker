@@ -1,7 +1,10 @@
 "use client";
 
 import type { Player } from "@/lib/types";
+import type { QuadrantBucket } from "@/lib/layout";
 import CounterChip from "@/components/CounterChip";
+import CounterBadge from "@/components/CounterBadge";
+import DamageGrid from "@/components/DamageGrid";
 
 export type OpponentDamage = {
   id: string;
@@ -13,30 +16,28 @@ export default function PlayerCard({
   player,
   isLethal,
   isFirst,
-  leftOpponents,
-  rightOpponents,
+  singleOpponent,
+  damageBuckets,
   poison,
   radiation,
   onChangeLife,
   onToggleEliminate,
   onRotate,
   onChangeCommanderDamage,
-  onChangePoison,
-  onChangeRadiation,
+  onOpenCounters,
 }: {
   player: Player;
   isLethal: boolean;
   isFirst: boolean;
-  leftOpponents: OpponentDamage[];
-  rightOpponents: OpponentDamage[];
+  singleOpponent?: OpponentDamage;
+  damageBuckets?: Record<QuadrantBucket, OpponentDamage[]>;
   poison: number;
   radiation: number;
   onChangeLife: (delta: number) => void;
   onToggleEliminate: () => void;
   onRotate: () => void;
   onChangeCommanderDamage: (fromOpponentId: string, delta: number) => void;
-  onChangePoison: (delta: number) => void;
-  onChangeRadiation: (delta: number) => void;
+  onOpenCounters: () => void;
 }) {
   const lifeColor =
     player.life <= 0
@@ -53,30 +54,20 @@ export default function PlayerCard({
           : "border-neutral-800 bg-neutral-900"
       }`}
     >
-      {(leftOpponents.length > 0 || rightOpponents.length > 0) && (
-        <div className="mb-1 flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1">
-            {leftOpponents.map((o) => (
-              <CounterChip
-                key={o.id}
-                label={o.name}
-                value={o.amount}
-                disabled={player.eliminated}
-                onChange={(delta) => onChangeCommanderDamage(o.id, delta)}
-              />
-            ))}
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            {rightOpponents.map((o) => (
-              <CounterChip
-                key={o.id}
-                label={o.name}
-                value={o.amount}
-                disabled={player.eliminated}
-                onChange={(delta) => onChangeCommanderDamage(o.id, delta)}
-              />
-            ))}
-          </div>
+      {singleOpponent && (
+        <div className="mb-1 flex justify-center">
+          <CounterChip
+            label={singleOpponent.name}
+            value={singleOpponent.amount}
+            disabled={player.eliminated}
+            onChange={(delta) => onChangeCommanderDamage(singleOpponent.id, delta)}
+          />
+        </div>
+      )}
+
+      {!singleOpponent && damageBuckets && (
+        <div className="mb-1 flex justify-center">
+          <DamageGrid buckets={damageBuckets} onOpen={onOpenCounters} />
         </div>
       )}
 
@@ -121,22 +112,9 @@ export default function PlayerCard({
         {player.life}
       </div>
 
-      <div className="mb-2 flex gap-1">
-        <CounterChip
-          label="Poison"
-          icon="/poison-counter.png"
-          value={poison}
-          color="poison"
-          disabled={player.eliminated}
-          onChange={onChangePoison}
-        />
-        <CounterChip
-          label="☢"
-          value={radiation}
-          color="radiation"
-          disabled={player.eliminated}
-          onChange={onChangeRadiation}
-        />
+      <div className="mb-2 flex justify-center gap-2">
+        <CounterBadge label="Poison" icon="/poison-counter.png" value={poison} onClick={onOpenCounters} />
+        <CounterBadge label="Radiation" emoji="☢" value={radiation} onClick={onOpenCounters} />
       </div>
 
       <div className="grid grid-cols-4 gap-2">

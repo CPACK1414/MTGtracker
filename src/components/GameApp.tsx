@@ -11,7 +11,13 @@ import {
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
 import { saveGame } from "@/app/actions";
-import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layout";
+import {
+  getLayoutTemplate,
+  gridTemplateAreas,
+  getQuadrant,
+  type Rotation,
+  type QuadrantBucket,
+} from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
@@ -19,10 +25,18 @@ import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
+import CounterModal from "@/components/CounterModal";
 import StatsScreen from "@/components/StatsScreen";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats";
 type CounterMap = Record<string, number>;
+
+const EMPTY_BUCKETS: Record<QuadrantBucket, OpponentDamage[]> = {
+  topLeft: [],
+  topRight: [],
+  bottomLeft: [],
+  bottomRight: [],
+};
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
@@ -38,6 +52,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [rotations, setRotations] = useState<Record<string, Rotation>>({});
+  const [counterModalPlayerId, setCounterModalPlayerId] = useState<string | null>(null);
 
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
@@ -88,6 +103,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setShowEndGame(false);
     setSaveError(null);
     setRotations({});
+    setCounterModalPlayerId(null);
     setHomeScreen("welcome");
   }
 
@@ -253,22 +269,34 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         }}
       >
         {players.map((p, i) => {
-          const myColCenter = layoutTemplate.placements[i]?.colCenter ?? 0.5;
-          const leftOpponents: OpponentDamage[] = [];
-          const rightOpponents: OpponentDamage[] = [];
-          players.forEach((o, j) => {
-            if (o.id === p.id) return;
-            const theirColCenter = layoutTemplate.placements[j]?.colCenter ?? 0.5;
-            const entry = { id: o.id, name: o.name, amount: damage[o.id]?.[p.id] ?? 0 };
-            if (theirColCenter < myColCenter) leftOpponents.push(entry);
-            else rightOpponents.push(entry);
-          });
+          const myPlacement = layoutTemplate.placements[i];
+          const opponents: OpponentDamage[] = players
+            .filter((o) => o.id !== p.id)
+            .map((o) => ({ id: o.id, name: o.name, amount: damage[o.id]?.[p.id] ?? 0 }));
+
+          const singleOpponent = players.length === 2 ? opponents[0] : undefined;
+
+          let damageBuckets: Record<QuadrantBucket, OpponentDamage[]> | undefined;
+          if (players.length > 2 && myPlacement) {
+            damageBuckets = { topLeft: [], topRight: [], bottomLeft: [], bottomRight: [] };
+            players.forEach((o, j) => {
+              if (o.id === p.id) return;
+              const theirPlacement = layoutTemplate.placements[j];
+              if (!theirPlacement) return;
+              const bucket = getQuadrant(myPlacement, theirPlacement);
+              damageBuckets![bucket].push({
+                id: o.id,
+                name: o.name,
+                amount: damage[o.id]?.[p.id] ?? 0,
+              });
+            });
+          }
 
           return (
             <RotatableCard
               key={p.id}
               rotation={rotations[p.id] ?? 0}
-              style={{ gridArea: layoutTemplate.placements[i]?.area }}
+              style={{ gridArea: myPlacement?.area }}
             >
               <PlayerCard
                 player={p}
@@ -278,21 +306,41 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
                   (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL ||
                   (poison[p.id] ?? 0) >= POISON_LETHAL
                 }
-                leftOpponents={leftOpponents}
-                rightOpponents={rightOpponents}
+                singleOpponent={singleOpponent}
+                damageBuckets={damageBuckets ?? EMPTY_BUCKETS}
                 poison={poison[p.id] ?? 0}
                 radiation={radiation[p.id] ?? 0}
                 onChangeLife={(delta) => changeLife(p.id, delta)}
                 onToggleEliminate={() => toggleEliminate(p.id)}
                 onRotate={() => rotatePlayer(p.id)}
                 onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
-                onChangePoison={(delta) => changePoison(p.id, delta)}
-                onChangeRadiation={(delta) => changeRadiation(p.id, delta)}
+                onOpenCounters={() => setCounterModalPlayerId(p.id)}
               />
             </RotatableCard>
           );
         })}
       </div>
+
+      {counterModalPlayerId &&
+        (() => {
+          const p = players.find((pl) => pl.id === counterModalPlayerId);
+          if (!p) return null;
+          const opponents: OpponentDamage[] = players
+            .filter((o) => o.id !== p.id)
+            .map((o) => ({ id: o.id, name: o.name, amount: damage[o.id]?.[p.id] ?? 0 }));
+          return (
+            <CounterModal
+              playerName={p.name}
+              opponents={opponents}
+              poison={poison[p.id] ?? 0}
+              radiation={radiation[p.id] ?? 0}
+              onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
+              onChangePoison={(delta) => changePoison(p.id, delta)}
+              onChangeRadiation={(delta) => changeRadiation(p.id, delta)}
+              onClose={() => setCounterModalPlayerId(null)}
+            />
+          );
+        })()}
 
       {showRandomizer && (
         <FirstPlayerRandomizer
