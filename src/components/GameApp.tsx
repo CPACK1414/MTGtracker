@@ -15,7 +15,7 @@ import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layou
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
-import PlayerCard from "@/components/PlayerCard";
+import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
@@ -252,38 +252,46 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           gridTemplateAreas: gridTemplateAreas(layoutTemplate),
         }}
       >
-        {players.map((p, i) => (
-          <RotatableCard
-            key={p.id}
-            rotation={rotations[p.id] ?? 0}
-            style={{ gridArea: layoutTemplate.placements[i]?.area }}
-          >
-            <PlayerCard
-              player={p}
-              isFirst={p.id === firstPlayerId}
-              isLethal={
-                p.life <= 0 ||
-                (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL ||
-                (poison[p.id] ?? 0) >= POISON_LETHAL
-              }
-              opponents={players
-                .filter((o) => o.id !== p.id)
-                .map((o) => ({
-                  id: o.id,
-                  name: o.name,
-                  amount: damage[o.id]?.[p.id] ?? 0,
-                }))}
-              poison={poison[p.id] ?? 0}
-              radiation={radiation[p.id] ?? 0}
-              onChangeLife={(delta) => changeLife(p.id, delta)}
-              onToggleEliminate={() => toggleEliminate(p.id)}
-              onRotate={() => rotatePlayer(p.id)}
-              onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
-              onChangePoison={(delta) => changePoison(p.id, delta)}
-              onChangeRadiation={(delta) => changeRadiation(p.id, delta)}
-            />
-          </RotatableCard>
-        ))}
+        {players.map((p, i) => {
+          const myColCenter = layoutTemplate.placements[i]?.colCenter ?? 0.5;
+          const leftOpponents: OpponentDamage[] = [];
+          const rightOpponents: OpponentDamage[] = [];
+          players.forEach((o, j) => {
+            if (o.id === p.id) return;
+            const theirColCenter = layoutTemplate.placements[j]?.colCenter ?? 0.5;
+            const entry = { id: o.id, name: o.name, amount: damage[o.id]?.[p.id] ?? 0 };
+            if (theirColCenter < myColCenter) leftOpponents.push(entry);
+            else rightOpponents.push(entry);
+          });
+
+          return (
+            <RotatableCard
+              key={p.id}
+              rotation={rotations[p.id] ?? 0}
+              style={{ gridArea: layoutTemplate.placements[i]?.area }}
+            >
+              <PlayerCard
+                player={p}
+                isFirst={p.id === firstPlayerId}
+                isLethal={
+                  p.life <= 0 ||
+                  (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL ||
+                  (poison[p.id] ?? 0) >= POISON_LETHAL
+                }
+                leftOpponents={leftOpponents}
+                rightOpponents={rightOpponents}
+                poison={poison[p.id] ?? 0}
+                radiation={radiation[p.id] ?? 0}
+                onChangeLife={(delta) => changeLife(p.id, delta)}
+                onToggleEliminate={() => toggleEliminate(p.id)}
+                onRotate={() => rotatePlayer(p.id)}
+                onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
+                onChangePoison={(delta) => changePoison(p.id, delta)}
+                onChangeRadiation={(delta) => changeRadiation(p.id, delta)}
+              />
+            </RotatableCard>
+          );
+        })}
       </div>
 
       {showRandomizer && (

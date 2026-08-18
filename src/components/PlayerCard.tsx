@@ -13,7 +13,8 @@ export default function PlayerCard({
   player,
   isLethal,
   isFirst,
-  opponents,
+  leftOpponents,
+  rightOpponents,
   poison,
   radiation,
   onChangeLife,
@@ -26,7 +27,8 @@ export default function PlayerCard({
   player: Player;
   isLethal: boolean;
   isFirst: boolean;
-  opponents: OpponentDamage[];
+  leftOpponents: OpponentDamage[];
+  rightOpponents: OpponentDamage[];
   poison: number;
   radiation: number;
   onChangeLife: (delta: number) => void;
@@ -51,6 +53,33 @@ export default function PlayerCard({
           : "border-neutral-800 bg-neutral-900"
       }`}
     >
+      {(leftOpponents.length > 0 || rightOpponents.length > 0) && (
+        <div className="mb-1 flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-1">
+            {leftOpponents.map((o) => (
+              <CounterChip
+                key={o.id}
+                label={o.name}
+                value={o.amount}
+                disabled={player.eliminated}
+                onChange={(delta) => onChangeCommanderDamage(o.id, delta)}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            {rightOpponents.map((o) => (
+              <CounterChip
+                key={o.id}
+                label={o.name}
+                value={o.amount}
+                disabled={player.eliminated}
+                onChange={(delta) => onChangeCommanderDamage(o.id, delta)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mb-1 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-neutral-300">
@@ -92,18 +121,10 @@ export default function PlayerCard({
         {player.life}
       </div>
 
-      <div className="mb-2 flex gap-1 overflow-x-auto">
-        {opponents.map((o) => (
-          <CounterChip
-            key={o.id}
-            label={o.name}
-            value={o.amount}
-            disabled={player.eliminated}
-            onChange={(delta) => onChangeCommanderDamage(o.id, delta)}
-          />
-        ))}
+      <div className="mb-2 flex gap-1">
         <CounterChip
-          label="☠"
+          label="Poison"
+          icon="/poison-counter.png"
           value={poison}
           color="poison"
           disabled={player.eliminated}

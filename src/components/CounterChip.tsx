@@ -6,12 +6,14 @@ export default function CounterChip({
   onChange,
   color = "neutral",
   disabled,
+  icon,
 }: {
   label: string;
   value: number;
   onChange: (delta: number) => void;
   color?: "neutral" | "poison" | "radiation";
   disabled?: boolean;
+  icon?: string;
 }) {
   const valueColor =
     color === "poison"
@@ -29,7 +31,24 @@ export default function CounterChip({
       >
         −
       </button>
-      <span className="max-w-12 truncate text-[10px] font-medium text-neutral-500">{label}</span>
+      {icon ? (
+        <span
+          aria-label={label}
+          className={`inline-block h-3 w-3 shrink-0 bg-current ${valueColor}`}
+          style={{
+            maskImage: `url(${icon})`,
+            maskSize: "contain",
+            maskRepeat: "no-repeat",
+            maskPosition: "center",
+            WebkitMaskImage: `url(${icon})`,
+            WebkitMaskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+          }}
+        />
+      ) : (
+        <span className="max-w-12 truncate text-[10px] font-medium text-neutral-500">{label}</span>
+      )}
       <span className={`w-5 text-center text-sm font-bold tabular-nums ${valueColor}`}>
         {value}
       </span>

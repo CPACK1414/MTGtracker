@@ -3,6 +3,10 @@ export type Rotation = 0 | 90 | 180 | 270;
 export type CardPlacement = {
   area: string;
   rotation: Rotation;
+  // Horizontal center of this seat within the grid (0 = leftmost column,
+  // 1 = rightmost column, 0.5 = spans/sits in the middle). Used to figure
+  // out whether another player's seat is to this card's left or right.
+  colCenter: number;
 };
 
 export type LayoutTemplate = {
@@ -21,8 +25,8 @@ export function getLayoutTemplate(count: number): LayoutTemplate {
       rows: "1fr 1fr",
       areas: ["top", "bottom"],
       placements: [
-        { area: "bottom", rotation: 0 },
-        { area: "top", rotation: 180 },
+        { area: "bottom", rotation: 0, colCenter: 0.5 },
+        { area: "top", rotation: 180, colCenter: 0.5 },
       ],
     };
   }
@@ -33,9 +37,9 @@ export function getLayoutTemplate(count: number): LayoutTemplate {
       rows: "1fr 1fr",
       areas: ["top-left top-right", "bottom bottom"],
       placements: [
-        { area: "bottom", rotation: 0 },
-        { area: "top-left", rotation: 180 },
-        { area: "top-right", rotation: 180 },
+        { area: "bottom", rotation: 0, colCenter: 0.5 },
+        { area: "top-left", rotation: 180, colCenter: 0 },
+        { area: "top-right", rotation: 180, colCenter: 1 },
       ],
     };
   }
@@ -46,10 +50,10 @@ export function getLayoutTemplate(count: number): LayoutTemplate {
       rows: "1fr 1fr",
       areas: ["top-left top-right", "bottom-left bottom-right"],
       placements: [
-        { area: "bottom-left", rotation: 0 },
-        { area: "top-left", rotation: 180 },
-        { area: "top-right", rotation: 180 },
-        { area: "bottom-right", rotation: 0 },
+        { area: "bottom-left", rotation: 0, colCenter: 0 },
+        { area: "top-left", rotation: 180, colCenter: 0 },
+        { area: "top-right", rotation: 180, colCenter: 1 },
+        { area: "bottom-right", rotation: 0, colCenter: 1 },
       ],
     };
   }
@@ -68,14 +72,14 @@ function buildFallbackGrid(count: number): LayoutTemplate {
     if (remaining === 1) {
       const area = `p${idx}`;
       areaRows.push(`${area} ${area}`);
-      placements.push({ area, rotation: 0 });
+      placements.push({ area, rotation: 0, colCenter: 0.5 });
       idx += 1;
     } else {
       const a1 = `p${idx}`;
       const a2 = `p${idx + 1}`;
       areaRows.push(`${a1} ${a2}`);
-      placements.push({ area: a1, rotation: 0 });
-      placements.push({ area: a2, rotation: 0 });
+      placements.push({ area: a1, rotation: 0, colCenter: 0 });
+      placements.push({ area: a2, rotation: 0, colCenter: 1 });
       idx += 2;
     }
   }
