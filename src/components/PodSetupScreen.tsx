@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { PlayerProfile } from "@/lib/library";
 import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
 import PodPlayerRow from "@/components/PodPlayerRow";
-import LayoutPreview from "@/components/LayoutPreview";
+import SeatAssignScreen from "@/components/SeatAssignScreen";
 
 export default function PodSetupScreen({
   players,
@@ -19,6 +19,7 @@ export default function PodSetupScreen({
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
+  const [showSeats, setShowSeats] = useState(false);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -28,8 +29,8 @@ export default function PodSetupScreen({
     });
   }
 
-  function handleStart() {
-    const selections: PodSelection[] = selectedIds
+  function buildSelections(): PodSelection[] {
+    return selectedIds
       .map((id) => players.find((p) => p.id === id))
       .filter((p): p is NonNullable<typeof p> => Boolean(p))
       .map((p) => {
@@ -43,10 +44,19 @@ export default function PodSetupScreen({
           commander: deck?.commander ?? undefined,
         };
       });
-    onStart(selections);
   }
 
   const canStart = selectedIds.length >= MIN_POD_SIZE && selectedIds.length <= MAX_POD_SIZE;
+
+  if (showSeats) {
+    return (
+      <SeatAssignScreen
+        selections={buildSelections()}
+        onBack={() => setShowSeats(false)}
+        onStart={onStart}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -93,16 +103,15 @@ export default function PodSetupScreen({
 
       {players.length > 0 && (
         <div className="border-t border-neutral-800 px-4 py-4">
-          <LayoutPreview count={selectedIds.length} />
           <button
             disabled={!canStart}
-            onClick={handleStart}
+            onClick={() => setShowSeats(true)}
             className="w-full rounded-2xl bg-emerald-500 px-8 py-5 text-xl font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-30 disabled:shadow-none"
           >
             {selectedIds.length === 0
               ? "Select players to start"
               : canStart
-              ? `Start Game (${selectedIds.length})`
+              ? `Next: Choose Seats (${selectedIds.length})`
               : `Max ${MAX_POD_SIZE} players`}
           </button>
         </div>
