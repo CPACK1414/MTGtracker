@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { OpponentDamage } from "@/components/PlayerCard";
+import type { Rotation } from "@/lib/layout";
 
 function StepperRow({
   label,
@@ -53,6 +54,7 @@ function StepperRow({
 
 export default function CounterModal({
   playerName,
+  rotation,
   opponents,
   poison,
   radiation,
@@ -62,6 +64,7 @@ export default function CounterModal({
   onClose,
 }: {
   playerName: string;
+  rotation: Rotation;
   opponents: OpponentDamage[];
   poison: number;
   radiation: number;
@@ -71,8 +74,11 @@ export default function CounterModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 sm:items-center sm:justify-center">
-      <div className="flex max-h-[85vh] flex-col gap-4 overflow-y-auto rounded-t-3xl bg-neutral-900 p-5 sm:w-full sm:max-w-sm sm:rounded-3xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div
+        style={{ transform: `rotate(${rotation}deg)` }}
+        className="flex max-h-[85vmin] w-[85vmin] max-w-sm flex-col gap-4 overflow-y-auto rounded-3xl bg-neutral-900 p-5"
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-white">{playerName}&apos;s Counters</h2>
           <button

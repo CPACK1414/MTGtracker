@@ -308,6 +308,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           return (
             <CounterModal
               playerName={p.name}
+              rotation={rotations[p.id] ?? 0}
               opponents={opponents}
               poison={poison[p.id] ?? 0}
               radiation={radiation[p.id] ?? 0}
