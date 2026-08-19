@@ -5,6 +5,7 @@ export type Player = {
   name: string;
   deckName?: string;
   commander?: string;
+  artCropUrl?: string | null;
   life: number;
   eliminated: boolean;
   eliminationReason?: "dead" | "scoop";
@@ -17,6 +18,7 @@ export type PodSelection = {
   deckId: string | null;
   deckName?: string;
   commander?: string;
+  artCropUrl?: string | null;
 };
 
 export const STARTING_LIFE = 40;
@@ -34,6 +36,7 @@ export function makePlayers(selections: PodSelection[]): Player[] {
     name: s.screenName?.trim() || s.name,
     deckName: s.deckName,
     commander: s.commander,
+    artCropUrl: s.artCropUrl,
     life: STARTING_LIFE,
     eliminated: false,
   }));

@@ -54,11 +54,18 @@ export default function PlayerCard({
 
   return (
     <div
-      className={`flex h-full w-full flex-col rounded-2xl border p-3 transition-opacity ${
+      className={`flex h-full w-full flex-col rounded-2xl border bg-cover bg-center p-3 transition-opacity ${
         player.eliminated
           ? "border-neutral-800 bg-neutral-900/50 opacity-50"
           : "border-neutral-800 bg-neutral-900"
       }`}
+      style={
+        player.artCropUrl
+          ? {
+              backgroundImage: `linear-gradient(to bottom, rgba(10,10,10,0.55), rgba(10,10,10,0.55) 55%, rgba(10,10,10,0.85)), url("${player.artCropUrl}")`,
+            }
+          : undefined
+      }
     >
       {singleOpponent && (
         <div className="mb-1 flex justify-center">

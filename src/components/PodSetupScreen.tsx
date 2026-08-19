@@ -48,6 +48,7 @@ export default function PodSetupScreen({
           deckId: dId,
           deckName: deck?.name,
           commander: deck?.commander ?? undefined,
+          artCropUrl: deck?.artCropUrl ?? null,
         };
       });
   }

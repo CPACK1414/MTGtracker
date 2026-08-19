@@ -16,8 +16,14 @@ export default function PlayerRow({
   player: PlayerProfile;
   onRename: (name: string, screenName: string | null) => Promise<void>;
   onDelete: () => void;
-  onAddDeck: (name: string, commander: string, colors: string) => void;
-  onEditDeck: (deckId: string, name: string, commander: string, colors: string) => void;
+  onAddDeck: (name: string, commander: string, colors: string, artCropUrl: string | null) => void;
+  onEditDeck: (
+    deckId: string,
+    name: string,
+    commander: string,
+    colors: string,
+    artCropUrl: string | null
+  ) => void;
   onRemoveDeck: (deckId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -120,8 +126,8 @@ export default function PlayerRow({
                 key={deck.id}
                 initial={deck}
                 onCancel={() => setEditingDeckId(null)}
-                onSave={(name, commander, colors) => {
-                  onEditDeck(deck.id, name, commander, colors);
+                onSave={(name, commander, colors, artCropUrl) => {
+                  onEditDeck(deck.id, name, commander, colors, artCropUrl);
                   setEditingDeckId(null);
                 }}
               />
@@ -138,8 +144,8 @@ export default function PlayerRow({
           {addingDeck ? (
             <DeckForm
               onCancel={() => setAddingDeck(false)}
-              onSave={(name, commander, colors) => {
-                onAddDeck(name, commander, colors);
+              onSave={(name, commander, colors, artCropUrl) => {
+                onAddDeck(name, commander, colors, artCropUrl);
                 setAddingDeck(false);
               }}
             />

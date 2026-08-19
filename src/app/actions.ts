@@ -78,7 +78,8 @@ export async function createDeck(
   playerId: string,
   name: string,
   commander: string,
-  colors: string
+  colors: string,
+  artCropUrl?: string | null
 ): Promise<Deck> {
   const [deck] = await db
     .insert(decks)
@@ -87,6 +88,7 @@ export async function createDeck(
       name,
       commander: commander || null,
       colors: colors || null,
+      artCropUrl: artCropUrl || null,
     })
     .returning();
   return deck;
@@ -96,11 +98,17 @@ export async function updateDeck(
   deckId: string,
   name: string,
   commander: string,
-  colors: string
+  colors: string,
+  artCropUrl?: string | null
 ): Promise<void> {
   await db
     .update(decks)
-    .set({ name, commander: commander || null, colors: colors || null })
+    .set({
+      name,
+      commander: commander || null,
+      colors: colors || null,
+      artCropUrl: artCropUrl || null,
+    })
     .where(eq(decks.id, deckId));
 }
 

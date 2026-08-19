@@ -62,8 +62,14 @@ export default function PlayerLibraryScreen({
     onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name, screenName } : p)));
   }
 
-  async function addDeck(playerId: string, name: string, commander: string, colors: string) {
-    const deck = await createDeck(playerId, name, commander, colors);
+  async function addDeck(
+    playerId: string,
+    name: string,
+    commander: string,
+    colors: string,
+    artCropUrl: string | null
+  ) {
+    const deck = await createDeck(playerId, name, commander, colors, artCropUrl);
     onChangePlayers((prev) =>
       prev.map((p) => (p.id === playerId ? { ...p, decks: [...p.decks, deck] } : p))
     );
@@ -74,7 +80,8 @@ export default function PlayerLibraryScreen({
     deckId: string,
     name: string,
     commander: string,
-    colors: string
+    colors: string,
+    artCropUrl: string | null
   ) {
     onChangePlayers((prev) =>
       prev.map((p) =>
@@ -83,7 +90,13 @@ export default function PlayerLibraryScreen({
               ...p,
               decks: p.decks.map((d) =>
                 d.id === deckId
-                  ? { ...d, name, commander: commander || null, colors: colors || null }
+                  ? {
+                      ...d,
+                      name,
+                      commander: commander || null,
+                      colors: colors || null,
+                      artCropUrl: artCropUrl || null,
+                    }
                   : d
               ),
             }
@@ -91,7 +104,7 @@ export default function PlayerLibraryScreen({
       )
     );
     startTransition(() => {
-      updateDeck(deckId, name, commander, colors);
+      updateDeck(deckId, name, commander, colors, artCropUrl);
     });
   }
 
@@ -156,9 +169,11 @@ export default function PlayerLibraryScreen({
               player={p}
               onRename={(name, screenName) => handleRename(p.id, name, screenName)}
               onDelete={() => removePlayer(p.id)}
-              onAddDeck={(name, commander, colors) => addDeck(p.id, name, commander, colors)}
-              onEditDeck={(deckId, name, commander, colors) =>
-                editDeck(p.id, deckId, name, commander, colors)
+              onAddDeck={(name, commander, colors, artCropUrl) =>
+                addDeck(p.id, name, commander, colors, artCropUrl)
+              }
+              onEditDeck={(deckId, name, commander, colors, artCropUrl) =>
+                editDeck(p.id, deckId, name, commander, colors, artCropUrl)
               }
               onRemoveDeck={(deckId) => removeDeck(p.id, deckId)}
             />
