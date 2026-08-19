@@ -1,9 +1,11 @@
-const COLOR_STYLES: Record<string, string> = {
-  W: "bg-neutral-100",
-  U: "bg-blue-500",
-  B: "bg-neutral-500",
-  R: "bg-red-500",
-  G: "bg-emerald-500",
+import Image from "next/image";
+
+const COLOR_ICONS: Record<string, string> = {
+  W: "/mana-white.png",
+  U: "/mana-blue.png",
+  B: "/mana-black.png",
+  R: "/mana-red.png",
+  G: "/mana-green.png",
 };
 
 export default function ColorPips({ colors }: { colors?: string | null }) {
@@ -11,15 +13,19 @@ export default function ColorPips({ colors }: { colors?: string | null }) {
   const letters = colors
     .toUpperCase()
     .split("")
-    .filter((c) => COLOR_STYLES[c]);
+    .filter((c) => COLOR_ICONS[c]);
   if (letters.length === 0) return null;
 
   return (
     <span className="inline-flex gap-1">
       {letters.map((c, i) => (
-        <span
+        <Image
           key={`${c}-${i}`}
-          className={`h-3 w-3 rounded-full ring-1 ring-black/40 ${COLOR_STYLES[c]}`}
+          src={COLOR_ICONS[c]}
+          alt={c}
+          width={14}
+          height={14}
+          className="h-3.5 w-3.5 shrink-0 rounded-full object-contain"
         />
       ))}
     </span>
