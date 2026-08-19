@@ -16,7 +16,7 @@ export default function WelcomeScreen({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-10 text-center">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Commander Life Tracker</h1>
+        <h1 className="text-3xl font-bold tracking-tight">MTG Game Tracker</h1>
         <p className="mt-2 text-neutral-400">What do you want to do?</p>
       </div>
 
