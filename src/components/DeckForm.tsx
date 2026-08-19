@@ -29,8 +29,7 @@ export default function DeckForm({
   onSave: (name: string, commander: string, colors: string) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [commander, setCommander] = useState(initial?.commander ?? "");
+  const [commander, setCommander] = useState(initial?.commander ?? initial?.name ?? "");
   const [colors, setColors] = useState(initial?.colors ?? "");
   const [decklistText, setDecklistText] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -57,14 +56,7 @@ export default function DeckForm({
 
   return (
     <div className="flex flex-col gap-2 rounded-xl bg-neutral-800/60 p-3">
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Deck name"
-        className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
-      />
-      <CommanderInput value={commander} onChange={setCommander} onPickColors={setColors} />
+      <CommanderInput autoFocus value={commander} onChange={setCommander} onPickColors={setColors} />
       <input
         value={colors}
         onChange={(e) => setColors(e.target.value.toUpperCase())}
@@ -107,9 +99,9 @@ export default function DeckForm({
           Cancel
         </button>
         <button
-          disabled={!name.trim() || !commander.trim()}
+          disabled={!commander.trim()}
           onClick={() =>
-            name.trim() && commander.trim() && onSave(name.trim(), commander.trim(), colors.trim())
+            commander.trim() && onSave(commander.trim(), commander.trim(), colors.trim())
           }
           className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-40"
         >

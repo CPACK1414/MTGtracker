@@ -130,9 +130,6 @@ function DeckRow({
           {deck.name}
           <ColorPips colors={deck.colors} />
         </span>
-        {deck.commander && (
-          <span className="block truncate text-xs text-neutral-400">{deck.commander}</span>
-        )}
       </button>
       <button onClick={onRemove} className="shrink-0 px-2 text-sm text-red-400/70">
         🗑

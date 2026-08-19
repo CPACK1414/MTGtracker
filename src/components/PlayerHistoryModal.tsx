@@ -85,11 +85,13 @@ export default function PlayerHistoryModal({
                     {g.eliminationReason === "scoop" && " · Scooped"}
                   </span>
                 </div>
+                {(g.commander || g.deckName) && (
+                  <p className="mt-1 truncate text-sm text-neutral-300">
+                    {g.commander || g.deckName}
+                  </p>
+                )}
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-neutral-500">
-                  <span className="truncate">
-                    {g.podSize}-player pod
-                    {g.commander ? ` · ${g.commander}` : g.deckName ? ` · ${g.deckName}` : ""}
-                  </span>
+                  <span className="truncate">{g.podSize}-player pod</span>
                   <span className="shrink-0 tabular-nums">{formatDuration(g.durationSeconds)}</span>
                 </div>
               </div>

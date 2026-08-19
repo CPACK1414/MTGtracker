@@ -48,7 +48,6 @@ export default function PodPlayerRow({
             {player.decks.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
-                {d.commander ? ` — ${d.commander}` : ""}
               </option>
             ))}
           </select>

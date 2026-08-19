@@ -237,10 +237,7 @@ function DeckLeaderboard({
             <span className="w-5 text-sm font-bold text-neutral-500">{i + 1}</span>
             <div className="min-w-0">
               <p className="truncate font-semibold text-white">{d.name}</p>
-              <p className="truncate text-xs text-neutral-500">
-                {d.playerName}
-                {d.commander ? ` · ${d.commander}` : ""}
-              </p>
+              <p className="truncate text-xs text-neutral-500">{d.playerName}</p>
               <p className="text-xs text-neutral-500">
                 {d.wins}W – {d.gamesPlayed - d.wins}L · {d.gamesPlayed} game
                 {d.gamesPlayed === 1 ? "" : "s"}

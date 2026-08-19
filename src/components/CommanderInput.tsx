@@ -10,10 +10,12 @@ export default function CommanderInput({
   value,
   onChange,
   onPickColors,
+  autoFocus,
 }: {
   value: string;
   onChange: (value: string) => void;
   onPickColors: (colors: string) => void;
+  autoFocus?: boolean;
 }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -78,6 +80,7 @@ export default function CommanderInput({
   return (
     <div className="relative">
       <input
+        autoFocus={autoFocus}
         value={value}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => setOpen(true)}
