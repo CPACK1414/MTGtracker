@@ -22,8 +22,9 @@ import EndGameModal from "@/components/EndGameModal";
 import CounterModal from "@/components/CounterModal";
 import StatsScreen from "@/components/StatsScreen";
 import GameTimer from "@/components/GameTimer";
+import GameHistoryScreen from "@/components/GameHistoryScreen";
 
-type HomeScreen = "welcome" | "newGame" | "library" | "stats";
+type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
 type CounterMap = Record<string, number>;
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
@@ -240,11 +241,15 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     if (homeScreen === "stats") {
       return <StatsScreen onBack={() => setHomeScreen("welcome")} />;
     }
+    if (homeScreen === "gameHistory") {
+      return <GameHistoryScreen onBack={() => setHomeScreen("welcome")} />;
+    }
     return (
       <WelcomeScreen
         onNewGame={() => setHomeScreen("newGame")}
         onLibrary={() => setHomeScreen("library")}
         onStats={() => setHomeScreen("stats")}
+        onGameHistory={() => setHomeScreen("gameHistory")}
       />
     );
   }

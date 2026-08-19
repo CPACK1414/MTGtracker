@@ -6,10 +6,12 @@ export default function WelcomeScreen({
   onNewGame,
   onLibrary,
   onStats,
+  onGameHistory,
 }: {
   onNewGame: () => void;
   onLibrary: () => void;
   onStats: () => void;
+  onGameHistory: () => void;
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-10 text-center">
@@ -62,6 +64,19 @@ export default function WelcomeScreen({
             <span className="block text-lg font-bold text-white">Stats</span>
             <span className="block text-sm text-neutral-400">
               Leaderboards and deck matchups
+            </span>
+          </span>
+        </button>
+
+        <button
+          onClick={onGameHistory}
+          className="flex items-center gap-4 rounded-2xl bg-neutral-800 px-6 py-5 text-left active:scale-95"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-3xl">📜</span>
+          <span>
+            <span className="block text-lg font-bold text-white">Game History</span>
+            <span className="block text-sm text-neutral-400">
+              Browse every game played
             </span>
           </span>
         </button>

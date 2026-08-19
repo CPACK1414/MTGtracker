@@ -397,3 +397,42 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
     participants,
   };
 }
+
+export type GameHistoryEntry = {
+  gameId: string;
+  playedAt: string;
+  podSize: number;
+  durationSeconds: number | null;
+  winnerName: string | null;
+};
+
+export async function getGameHistory(
+  podSize?: number | null,
+  dateRange?: DateRange | null
+): Promise<GameHistoryEntry[]> {
+  const allGames = await db.select().from(games).orderBy(desc(games.playedAt));
+
+  let filtered = podSize ? allGames.filter((g) => g.podSize === podSize) : allGames;
+  if (dateRange) {
+    const from = new Date(dateRange.from).getTime();
+    const to = new Date(dateRange.to).getTime();
+    filtered = filtered.filter((g) => {
+      const playedAt = g.playedAt.getTime();
+      return playedAt >= from && playedAt <= to;
+    });
+  }
+
+  const winnerIds = filtered.map((g) => g.winnerPlayerId).filter((x): x is string => Boolean(x));
+  const winnerRows = winnerIds.length
+    ? await db.select().from(players).where(inArray(players.id, winnerIds))
+    : [];
+  const winnersById = new Map(winnerRows.map((p) => [p.id, p.name]));
+
+  return filtered.map((g) => ({
+    gameId: g.id,
+    playedAt: g.playedAt.toISOString(),
+    podSize: g.podSize,
+    durationSeconds: g.durationSeconds,
+    winnerName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId) ?? null : null,
+  }));
+}
