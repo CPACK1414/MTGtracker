@@ -109,13 +109,13 @@ export default function PlayerCard({
       style={
         player.artCropUrl
           ? {
-              backgroundImage: `linear-gradient(to bottom, rgba(10,10,10,0.55), rgba(10,10,10,0.55) 55%, rgba(10,10,10,0.85)), url("${player.artCropUrl}")`,
+              backgroundImage: `linear-gradient(to bottom, rgba(10,10,10,0.2), rgba(10,10,10,0.2) 55%, rgba(10,10,10,0.5)), url("${player.artCropUrl}")`,
             }
           : undefined
       }
     >
       <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center text-center text-6xl font-black tabular-nums ${lifeColor}`}
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center text-center text-6xl font-black tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] ${lifeColor}`}
       >
         {player.life}
       </div>
