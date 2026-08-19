@@ -21,6 +21,7 @@ export const decks = pgTable("decks", {
 export const games = pgTable("games", {
   id: uuid("id").primaryKey().defaultRandom(),
   playedAt: timestamp("played_at", { withTimezone: true }).notNull().defaultNow(),
+  durationSeconds: integer("duration_seconds"),
   podSize: integer("pod_size").notNull(),
   winnerPlayerId: uuid("winner_player_id").references(() => players.id),
   winnerDeckId: uuid("winner_deck_id").references(() => decks.id),

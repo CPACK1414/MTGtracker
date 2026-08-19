@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { commanderDamage, decks, gameParticipants, games, players } from "@/db/schema";
 import { STARTING_LIFE } from "@/lib/types";
@@ -88,6 +88,7 @@ export async function deleteDeck(deckId: string): Promise<void> {
 
 export type SaveGamePayload = {
   podSize: number;
+  durationSeconds: number;
   winnerPlayerId: string | null;
   winnerDeckId: string | null;
   participants: {
@@ -106,6 +107,7 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
       .insert(games)
       .values({
         podSize: payload.podSize,
+        durationSeconds: payload.durationSeconds,
         winnerPlayerId: payload.winnerPlayerId,
         winnerDeckId: payload.winnerDeckId,
       })
@@ -264,4 +266,52 @@ export async function getReportingData(podSize?: number | null): Promise<Reporti
   );
 
   return { players: playerStats, decks: deckStats, matchups };
+}
+
+export type PlayerGameHistoryEntry = {
+  gameId: string;
+  playedAt: string;
+  durationSeconds: number | null;
+  podSize: number;
+  placement: number | null;
+  won: boolean;
+  deckName: string | null;
+  commander: string | null;
+};
+
+export async function getPlayerGameHistory(playerId: string): Promise<PlayerGameHistoryEntry[]> {
+  const rows = await db
+    .select({
+      gameId: gameParticipants.gameId,
+      placement: gameParticipants.placement,
+      deckId: gameParticipants.deckId,
+      playedAt: games.playedAt,
+      durationSeconds: games.durationSeconds,
+      podSize: games.podSize,
+      winnerPlayerId: games.winnerPlayerId,
+    })
+    .from(gameParticipants)
+    .innerJoin(games, eq(gameParticipants.gameId, games.id))
+    .where(eq(gameParticipants.playerId, playerId))
+    .orderBy(desc(games.playedAt));
+
+  const deckIds = rows.map((r) => r.deckId).filter((x): x is string => Boolean(x));
+  const deckRows = deckIds.length
+    ? await db.select().from(decks).where(inArray(decks.id, deckIds))
+    : [];
+  const decksById = new Map(deckRows.map((d) => [d.id, d]));
+
+  return rows.map((r) => {
+    const deck = r.deckId ? decksById.get(r.deckId) : undefined;
+    return {
+      gameId: r.gameId,
+      playedAt: r.playedAt.toISOString(),
+      durationSeconds: r.durationSeconds,
+      podSize: r.podSize,
+      placement: r.placement,
+      won: r.winnerPlayerId === playerId,
+      deckName: deck?.name ?? null,
+      commander: deck?.commander ?? null,
+    };
+  });
 }

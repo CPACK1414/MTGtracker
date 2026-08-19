@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getReportingData, type ReportingData } from "@/app/actions";
 import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
+import PlayerHistoryModal from "@/components/PlayerHistoryModal";
 
 type Tab = "players" | "decks" | "matchups";
 
@@ -19,6 +20,7 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<ReportingData | null>(null);
   const [tab, setTab] = useState<Tab>("players");
   const [podSizeFilter, setPodSizeFilter] = useState<number | null>(null);
+  const [historyPlayer, setHistoryPlayer] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     getReportingData(podSizeFilter).then(setData);
@@ -74,13 +76,25 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         {!data ? (
           <p className="mt-10 text-center text-sm text-neutral-500">Loading…</p>
         ) : tab === "players" ? (
-          <PlayerLeaderboard players={data.players} podSizeFilter={podSizeFilter} />
+          <PlayerLeaderboard
+            players={data.players}
+            podSizeFilter={podSizeFilter}
+            onSelectPlayer={(id, name) => setHistoryPlayer({ id, name })}
+          />
         ) : tab === "decks" ? (
           <DeckLeaderboard decks={data.decks} podSizeFilter={podSizeFilter} />
         ) : (
           <MatchupTable matchups={data.matchups} podSizeFilter={podSizeFilter} />
         )}
       </div>
+
+      {historyPlayer && (
+        <PlayerHistoryModal
+          playerId={historyPlayer.id}
+          playerName={historyPlayer.name}
+          onClose={() => setHistoryPlayer(null)}
+        />
+      )}
     </div>
   );
 }
@@ -88,9 +102,11 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
 function PlayerLeaderboard({
   players,
   podSizeFilter,
+  onSelectPlayer,
 }: {
   players: ReportingData["players"];
   podSizeFilter: number | null;
+  onSelectPlayer: (id: string, name: string) => void;
 }) {
   if (players.length === 0) {
     return (
@@ -106,9 +122,10 @@ function PlayerLeaderboard({
   return (
     <div className="flex flex-col gap-2">
       {players.map((p, i) => (
-        <div
+        <button
           key={p.id}
-          className="flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3"
+          onClick={() => onSelectPlayer(p.id, p.name)}
+          className="flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-left active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
             <span className="w-5 text-sm font-bold text-neutral-500">{i + 1}</span>
@@ -123,7 +140,7 @@ function PlayerLeaderboard({
           <span className="text-lg font-black tabular-nums text-emerald-400">
             {pct(p.winRate)}
           </span>
-        </div>
+        </button>
       ))}
     </div>
   );

@@ -183,8 +183,12 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     }
 
     try {
+      const durationSeconds = gameStartedAt
+        ? Math.max(0, Math.floor((Date.now() - gameStartedAt) / 1000))
+        : 0;
       await saveGame({
         podSize: players.length,
+        durationSeconds,
         winnerPlayerId: winner.profileId,
         winnerDeckId: winner.deckId,
         participants: players.map((p, i) => ({
