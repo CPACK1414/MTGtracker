@@ -26,7 +26,7 @@ export const COMMANDER_DAMAGE_LETHAL = 21;
 export const POISON_LETHAL = 10;
 
 export const MIN_POD_SIZE = 2;
-export const MAX_POD_SIZE = 8;
+export const MAX_POD_SIZE = 4;
 
 export function makePlayers(selections: PodSelection[]): Player[] {
   return selections.map((s) => ({

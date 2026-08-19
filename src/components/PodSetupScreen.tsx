@@ -79,7 +79,7 @@ export default function PodSetupScreen({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <p className="mb-3 text-center text-sm text-neutral-400">
-          Pick 2–8 players for this pod — everyone needs a deck to start
+          Pick {MIN_POD_SIZE}–{MAX_POD_SIZE} players for this pod — everyone needs a deck to start
         </p>
 
         {players.length === 0 ? (
