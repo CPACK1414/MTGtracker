@@ -1,5 +1,7 @@
 "use client";
 
+import { useHoldRepeat } from "@/lib/useHoldRepeat";
+
 export default function CounterChip({
   label,
   value,
@@ -15,6 +17,9 @@ export default function CounterChip({
   disabled?: boolean;
   icon?: string;
 }) {
+  const minusHold = useHoldRepeat();
+  const plusHold = useHoldRepeat();
+
   const valueColor =
     color === "poison"
       ? "text-emerald-400"
@@ -26,7 +31,10 @@ export default function CounterChip({
     <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-neutral-800 pl-1">
       <button
         disabled={disabled}
-        onClick={() => onChange(-1)}
+        onPointerDown={() => minusHold.start(() => onChange(-10))}
+        onPointerUp={() => minusHold.release(() => onChange(-1))}
+        onPointerLeave={minusHold.cancel}
+        onPointerCancel={minusHold.cancel}
         className="px-1.5 py-1.5 text-xs font-bold text-red-400 active:scale-95 disabled:opacity-30"
       >
         −
@@ -54,7 +62,10 @@ export default function CounterChip({
       </span>
       <button
         disabled={disabled}
-        onClick={() => onChange(1)}
+        onPointerDown={() => plusHold.start(() => onChange(10))}
+        onPointerUp={() => plusHold.release(() => onChange(1))}
+        onPointerLeave={plusHold.cancel}
+        onPointerCancel={plusHold.cancel}
         className="px-1.5 py-1.5 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
       >
         +

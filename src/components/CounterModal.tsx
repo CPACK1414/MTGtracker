@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { OpponentDamage } from "@/components/PlayerCard";
 import type { Rotation } from "@/lib/layout";
+import { useHoldRepeat } from "@/lib/useHoldRepeat";
 
 function StepperRow({
   label,
@@ -17,6 +18,9 @@ function StepperRow({
   icon?: string;
   emoji?: string;
 }) {
+  const minusHold = useHoldRepeat();
+  const plusHold = useHoldRepeat();
+
   return (
     <div className="flex items-center justify-between rounded-2xl bg-neutral-800/60 px-4 py-3">
       <div className="flex min-w-0 items-center gap-2">
@@ -35,14 +39,20 @@ function StepperRow({
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <button
-          onClick={() => onChange(-1)}
+          onPointerDown={() => minusHold.start(() => onChange(-10))}
+          onPointerUp={() => minusHold.release(() => onChange(-1))}
+          onPointerLeave={minusHold.cancel}
+          onPointerCancel={minusHold.cancel}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-700 text-lg font-bold text-red-400 active:scale-95"
         >
           −
         </button>
         <span className="w-6 text-center text-xl font-black tabular-nums text-white">{value}</span>
         <button
-          onClick={() => onChange(1)}
+          onPointerDown={() => plusHold.start(() => onChange(10))}
+          onPointerUp={() => plusHold.release(() => onChange(1))}
+          onPointerLeave={plusHold.cancel}
+          onPointerCancel={plusHold.cancel}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-700 text-lg font-bold text-emerald-400 active:scale-95"
         >
           +
