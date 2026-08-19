@@ -13,7 +13,7 @@ export type OpponentDamage = {
 };
 
 const HOLD_DELAY_MS = 450;
-const HOLD_INTERVAL_MS = 150;
+const HOLD_INTERVAL_MS = 500;
 
 function useHoldRepeat() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
