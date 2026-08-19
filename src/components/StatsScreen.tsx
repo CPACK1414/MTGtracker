@@ -1,16 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getReportingData, type ReportingData } from "@/app/actions";
+import { useEffect, useMemo, useState } from "react";
+import { getReportingData, type DateRange, type ReportingData } from "@/app/actions";
 import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
 import PlayerHistoryModal from "@/components/PlayerHistoryModal";
 
 type Tab = "players" | "decks" | "matchups";
+type TimeRangeKey = "all" | "7d" | "30d" | "90d" | "1y" | "custom";
 
 const POD_SIZES = Array.from(
   { length: MAX_POD_SIZE - MIN_POD_SIZE + 1 },
   (_, i) => i + MIN_POD_SIZE
 );
+
+const TIME_RANGES: { key: TimeRangeKey; label: string; days?: number }[] = [
+  { key: "all", label: "All time" },
+  { key: "7d", label: "7 days", days: 7 },
+  { key: "30d", label: "30 days", days: 30 },
+  { key: "90d", label: "90 days", days: 90 },
+  { key: "1y", label: "1 year", days: 365 },
+  { key: "custom", label: "Custom" },
+];
 
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -20,11 +30,31 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<ReportingData | null>(null);
   const [tab, setTab] = useState<Tab>("players");
   const [podSizeFilter, setPodSizeFilter] = useState<number | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRangeKey>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [historyPlayer, setHistoryPlayer] = useState<{ id: string; name: string } | null>(null);
 
+  const dateRange: DateRange | null = useMemo(() => {
+    if (timeRange === "all") return null;
+    if (timeRange === "custom") {
+      if (!customFrom || !customTo) return null;
+      return {
+        from: new Date(`${customFrom}T00:00:00`).toISOString(),
+        to: new Date(`${customTo}T23:59:59.999`).toISOString(),
+      };
+    }
+    const days = TIME_RANGES.find((r) => r.key === timeRange)?.days ?? 0;
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - days);
+    return { from: from.toISOString(), to: to.toISOString() };
+  }, [timeRange, customFrom, customTo]);
+
   useEffect(() => {
-    getReportingData(podSizeFilter).then(setData);
-  }, [podSizeFilter]);
+    if (timeRange === "custom" && !dateRange) return;
+    getReportingData(podSizeFilter, dateRange).then(setData);
+  }, [podSizeFilter, dateRange, timeRange]);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -57,6 +87,38 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
           </button>
         ))}
       </div>
+
+      <div className="flex gap-1 overflow-x-auto px-4 pt-2">
+        {TIME_RANGES.map((r) => (
+          <button
+            key={r.key}
+            onClick={() => setTimeRange(r.key)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+              timeRange === r.key ? "bg-indigo-500 text-white" : "bg-neutral-900 text-neutral-400"
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+
+      {timeRange === "custom" && (
+        <div className="flex items-center gap-2 px-4 pt-2 text-sm">
+          <input
+            type="date"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="min-w-0 flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-white outline-none"
+          />
+          <span className="shrink-0 text-neutral-500">to</span>
+          <input
+            type="date"
+            value={customTo}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="min-w-0 flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-white outline-none"
+          />
+        </div>
+      )}
 
       <div className="flex gap-1 px-4 py-3">
         {(["players", "decks", "matchups"] as Tab[]).map((t) => (
