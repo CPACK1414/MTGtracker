@@ -277,6 +277,7 @@ export type PlayerGameHistoryEntry = {
   podSize: number;
   placement: number | null;
   won: boolean;
+  eliminationReason: "dead" | "scoop" | null;
   deckName: string | null;
   commander: string | null;
 };
@@ -287,6 +288,7 @@ export async function getPlayerGameHistory(playerId: string): Promise<PlayerGame
       gameId: gameParticipants.gameId,
       placement: gameParticipants.placement,
       deckId: gameParticipants.deckId,
+      eliminationReason: gameParticipants.eliminationReason,
       playedAt: games.playedAt,
       durationSeconds: games.durationSeconds,
       podSize: games.podSize,
@@ -312,6 +314,7 @@ export async function getPlayerGameHistory(playerId: string): Promise<PlayerGame
       podSize: r.podSize,
       placement: r.placement,
       won: r.winnerPlayerId === playerId,
+      eliminationReason: r.eliminationReason as "dead" | "scoop" | null,
       deckName: deck?.name ?? null,
       commander: deck?.commander ?? null,
     };

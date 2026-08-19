@@ -74,10 +74,15 @@ export default function PlayerHistoryModal({
                   </span>
                   <span
                     className={`shrink-0 text-sm font-black ${
-                      g.won ? "text-emerald-400" : "text-neutral-500"
+                      g.won
+                        ? "text-emerald-400"
+                        : g.eliminationReason === "scoop"
+                        ? "text-red-500"
+                        : "text-neutral-500"
                     }`}
                   >
                     {g.won ? "Win" : g.placement ? `${ordinal(g.placement)} place` : "Loss"}
+                    {g.eliminationReason === "scoop" && " · Scooped"}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-neutral-500">
