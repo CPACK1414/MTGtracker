@@ -51,7 +51,9 @@ export default function PodSetupScreen({
       });
   }
 
-  const canStart = selectedIds.length >= MIN_POD_SIZE && selectedIds.length <= MAX_POD_SIZE;
+  const sizeOk = selectedIds.length >= MIN_POD_SIZE && selectedIds.length <= MAX_POD_SIZE;
+  const allHaveDecks = selectedIds.every((id) => Boolean(deckChoice[id]));
+  const canStart = sizeOk && allHaveDecks;
 
   if (showSeats) {
     return (
@@ -75,7 +77,7 @@ export default function PodSetupScreen({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <p className="mb-3 text-center text-sm text-neutral-400">
-          Pick 2–8 players for this pod, and a deck for each
+          Pick 2–8 players for this pod — everyone needs a deck to start
         </p>
 
         {players.length === 0 ? (
@@ -130,9 +132,13 @@ export default function PodSetupScreen({
           >
             {selectedIds.length === 0
               ? "Select players to start"
-              : canStart
-              ? `Next: Choose Seats (${selectedIds.length})`
-              : `Max ${MAX_POD_SIZE} players`}
+              : selectedIds.length < MIN_POD_SIZE
+              ? `Pick at least ${MIN_POD_SIZE} players`
+              : !sizeOk
+              ? `Max ${MAX_POD_SIZE} players`
+              : !allHaveDecks
+              ? "Pick a deck for everyone"
+              : `Next: Choose Seats (${selectedIds.length})`}
           </button>
         </div>
       )}

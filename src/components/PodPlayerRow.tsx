@@ -39,18 +39,26 @@ export default function PodPlayerRow({
 
       {selected && (
         <div className="px-3 pb-3">
-          <select
-            value={deckId ?? ""}
-            onChange={(e) => onSelectDeck(e.target.value || null)}
-            className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none"
-          >
-            <option value="">No deck</option>
-            {player.decks.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
+          {player.decks.length === 0 ? (
+            <p className="rounded-lg bg-red-950 px-3 py-2 text-xs text-red-300">
+              No decks yet — add one for {player.name} in Players &amp; Decks first.
+            </p>
+          ) : (
+            <select
+              value={deckId ?? ""}
+              onChange={(e) => onSelectDeck(e.target.value || null)}
+              className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none"
+            >
+              <option value="" disabled>
+                Choose a deck
               </option>
-            ))}
-          </select>
+              {player.decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       )}
     </div>
