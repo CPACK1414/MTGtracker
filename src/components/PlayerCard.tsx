@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Player } from "@/lib/types";
 import CounterChip from "@/components/CounterChip";
@@ -12,6 +12,35 @@ export type OpponentDamage = {
   name: string;
   amount: number;
 };
+
+const LIFE_DELTA_DISPLAY_MS = 5000;
+
+function useLifeDelta(life: number) {
+  const [delta, setDelta] = useState(0);
+  const prevLifeRef = useRef(life);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const diff = life - prevLifeRef.current;
+    prevLifeRef.current = life;
+    if (diff === 0) return;
+
+    setDelta((prev) => prev + diff);
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = setTimeout(() => {
+      setDelta(0);
+      hideTimeoutRef.current = null;
+    }, LIFE_DELTA_DISPLAY_MS);
+  }, [life]);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
+  }, []);
+
+  return delta;
+}
 
 export default function PlayerCard({
   player,
@@ -47,6 +76,7 @@ export default function PlayerCard({
   const [confirmingElimination, setConfirmingElimination] = useState(false);
   const minusHold = useHoldRepeat();
   const plusHold = useHoldRepeat();
+  const lifeDelta = useLifeDelta(player.life);
 
   const lifeColor =
     player.life <= 0
@@ -70,10 +100,21 @@ export default function PlayerCard({
           : undefined
       }
     >
-      <div
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center text-center text-6xl font-black tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] ${lifeColor}`}
-      >
-        {player.life}
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+        {lifeDelta !== 0 && (
+          <span
+            className={`text-lg font-bold tabular-nums drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] ${
+              lifeDelta > 0 ? "text-emerald-400" : "text-red-400"
+            }`}
+          >
+            {lifeDelta > 0 ? `+${lifeDelta}` : lifeDelta}
+          </span>
+        )}
+        <span
+          className={`text-center text-6xl font-black tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] ${lifeColor}`}
+        >
+          {player.life}
+        </span>
       </div>
 
       {singleOpponent && (
