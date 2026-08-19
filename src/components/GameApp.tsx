@@ -24,6 +24,7 @@ import StatsScreen from "@/components/StatsScreen";
 import GameTimer from "@/components/GameTimer";
 import GameHistoryScreen from "@/components/GameHistoryScreen";
 import { useWakeLock } from "@/lib/useWakeLock";
+import { useConfirmUnload } from "@/lib/useConfirmUnload";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
 type CounterMap = Record<string, number>;
@@ -32,6 +33,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
   useWakeLock(Boolean(players));
+  useConfirmUnload(Boolean(players));
   const [homeScreen, setHomeScreen] = useState<HomeScreen>("welcome");
   const [damage, setDamage] = useState<Record<string, Record<string, number>>>({});
   const [poison, setPoison] = useState<CounterMap>({});
