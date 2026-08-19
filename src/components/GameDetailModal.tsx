@@ -85,11 +85,11 @@ export default function GameDetailModal({
                       {p.eliminationReason === "scoop" && " · Scooped"}
                     </span>
                   </div>
-                  {(p.commander || p.deckName) && (
-                    <p className="mt-1 truncate text-sm text-neutral-300">
-                      {p.commander || p.deckName}
-                    </p>
-                  )}
+                  <p className="mt-1 truncate text-sm text-neutral-300">
+                    {p.commander || p.deckName || (
+                      <span className="text-neutral-600">No deck selected</span>
+                    )}
+                  </p>
                   <p className="mt-1 text-xs text-neutral-500">
                     Final life:{" "}
                     <span className="tabular-nums text-neutral-300">
