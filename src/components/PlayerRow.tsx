@@ -28,6 +28,7 @@ export default function PlayerRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [draftName, setDraftName] = useState(player.name);
   const [draftScreenName, setDraftScreenName] = useState(player.screenName ?? "");
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -90,31 +91,59 @@ export default function PlayerRow({
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-3 p-3">
-          <button
-            onClick={startRenaming}
-            className="min-w-0 flex-1 truncate text-left text-base font-semibold text-neutral-100"
-          >
-            {player.name}
-            {player.screenName && (
-              <span className="ml-1 font-normal text-neutral-500">({player.screenName})</span>
+        <div className="flex flex-col gap-1.5 p-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={startRenaming}
+              className="min-w-0 flex-1 truncate text-left text-base font-semibold text-neutral-100"
+            >
+              {player.name}
+              {player.screenName && (
+                <span className="ml-1 font-normal text-neutral-500">({player.screenName})</span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-neutral-400"
+            >
+              Decks ({player.decks.length}) {expanded ? "▾" : "▸"}
+            </button>
+
+            {confirmingDelete ? (
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    onDelete();
+                  }}
+                  className="rounded-full bg-red-600 px-2 py-1 text-[10px] font-bold text-white active:scale-95"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(false)}
+                  className="rounded-full bg-neutral-700 px-2 py-1 text-[10px] font-bold text-neutral-300 active:scale-95"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                aria-label="Delete player"
+                className="shrink-0 rounded-full px-2 py-1.5 text-sm text-red-400/70"
+              >
+                🗑
+              </button>
             )}
-          </button>
+          </div>
 
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-neutral-400"
-          >
-            Decks ({player.decks.length}) {expanded ? "▾" : "▸"}
-          </button>
-
-          <button
-            onClick={onDelete}
-            aria-label="Delete player"
-            className="shrink-0 rounded-full px-2 py-1.5 text-sm text-red-400/70"
-          >
-            🗑
-          </button>
+          {confirmingDelete && player.gamesPlayed === 0 && (
+            <p className="text-right text-xs text-neutral-500">
+              This player has no game history — nothing else will be deleted.
+            </p>
+          )}
         </div>
       )}
 

@@ -6,11 +6,17 @@ import { commanderDamage, decks, gameParticipants, games, players } from "@/db/s
 import { STARTING_LIFE } from "@/lib/types";
 import type { Deck, PlayerProfile } from "@/lib/library";
 
+function pgErrorCode(e: unknown): string | undefined {
+  if (!e || typeof e !== "object") return undefined;
+  const code = (e as { code?: string }).code;
+  if (code) return code;
+  const cause = (e as { cause?: unknown }).cause;
+  return pgErrorCode(cause);
+}
+
 function friendlyDbError(e: unknown, context: string): never {
-  if (e && typeof e === "object" && "code" in e && (e as { code?: string }).code === "23503") {
-    throw new Error(
-      `Can't delete this ${context} — it's referenced by past game history.`
-    );
+  if (pgErrorCode(e) === "23503") {
+    throw new Error(`Can't delete — this ${context} has game history attached.`);
   }
   throw e;
 }
@@ -36,9 +42,10 @@ async function ensureUniqueNames(
 }
 
 export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
-  const [allPlayers, allDecks] = await Promise.all([
+  const [allPlayers, allDecks, allParticipants] = await Promise.all([
     db.select().from(players).orderBy(players.createdAt),
     db.select().from(decks).orderBy(decks.createdAt),
+    db.select().from(gameParticipants),
   ]);
 
   const decksByPlayer = new Map<string, Deck[]>();
@@ -48,13 +55,22 @@ export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
     decksByPlayer.set(d.playerId, list);
   }
 
-  return allPlayers.map((p) => ({ ...p, decks: decksByPlayer.get(p.id) ?? [] }));
+  const gamesPlayedByPlayer = new Map<string, number>();
+  for (const gp of allParticipants) {
+    gamesPlayedByPlayer.set(gp.playerId, (gamesPlayedByPlayer.get(gp.playerId) ?? 0) + 1);
+  }
+
+  return allPlayers.map((p) => ({
+    ...p,
+    decks: decksByPlayer.get(p.id) ?? [],
+    gamesPlayed: gamesPlayedByPlayer.get(p.id) ?? 0,
+  }));
 }
 
 export async function createPlayer(name: string): Promise<PlayerProfile> {
   await ensureUniqueNames(name, null);
   const [player] = await db.insert(players).values({ name }).returning();
-  return { ...player, decks: [] };
+  return { ...player, decks: [], gamesPlayed: 0 };
 }
 
 export async function renamePlayer(

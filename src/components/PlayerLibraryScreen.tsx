@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { PlayerProfile } from "@/lib/library";
 import PlayerRow from "@/components/PlayerRow";
 import {
@@ -25,6 +25,12 @@ export default function PlayerLibraryScreen({
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 4000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   const filteredPlayers = players.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -131,16 +137,16 @@ export default function PlayerLibraryScreen({
         <span className="w-12" />
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {error && (
-          <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-red-950 px-3 py-2 text-sm text-red-300">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="shrink-0 font-bold">
-              ✕
-            </button>
-          </div>
-        )}
+      {error && (
+        <div className="fixed inset-x-4 top-4 z-50 flex items-center justify-between gap-2 rounded-xl border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-200 shadow-lg shadow-black/40">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="shrink-0 font-bold">
+            ✕
+          </button>
+        </div>
+      )}
 
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {players.length === 0 && (
           <p className="mb-3 text-center text-sm text-neutral-500">
             No players yet — add everyone in your group below.
