@@ -349,10 +349,10 @@ function DeckMatchupTable({
                 const rate = group.gamesPlayed ? d.wins / group.gamesPlayed : 0;
                 return (
                   <div key={d.id} className="flex items-center justify-between gap-2 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-white">{d.name}</p>
-                      <p className="truncate text-xs text-neutral-500">{d.playerName}</p>
-                    </div>
+                    <p className="min-w-0 truncate font-semibold text-white">
+                      {d.name}
+                      <span className="ml-1 font-normal text-neutral-500">({d.playerName})</span>
+                    </p>
                     <span className="shrink-0 tabular-nums text-neutral-400">
                       {d.wins}W – {losses}L
                       <span className="ml-1 font-bold text-emerald-400">{pct(rate)}</span>
