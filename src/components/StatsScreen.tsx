@@ -5,8 +5,15 @@ import { getReportingData, type DateRange, type ReportingData } from "@/app/acti
 import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
 import PlayerHistoryModal from "@/components/PlayerHistoryModal";
 
-type Tab = "players" | "decks" | "matchups";
+type Tab = "totalWins" | "winRate" | "decks" | "matchups";
 type TimeRangeKey = "all" | "7d" | "30d" | "90d" | "1y" | "custom";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "totalWins", label: "Total Wins" },
+  { key: "winRate", label: "Win Rate" },
+  { key: "decks", label: "Decks" },
+  { key: "matchups", label: "Matchups" },
+];
 
 const POD_SIZES = Array.from(
   { length: MAX_POD_SIZE - MIN_POD_SIZE + 1 },
@@ -28,7 +35,7 @@ function pct(rate: number): string {
 
 export default function StatsScreen({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<ReportingData | null>(null);
-  const [tab, setTab] = useState<Tab>("players");
+  const [tab, setTab] = useState<Tab>("totalWins");
   const [podSizeFilter, setPodSizeFilter] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("all");
   const [customFrom, setCustomFrom] = useState("");
@@ -120,16 +127,16 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <div className="flex gap-1 px-4 py-3">
-        {(["players", "decks", "matchups"] as Tab[]).map((t) => (
+      <div className="flex gap-1 overflow-x-auto px-4 py-3">
+        {TABS.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 rounded-full py-2 text-sm font-semibold capitalize ${
-              tab === t ? "bg-indigo-500 text-white" : "bg-neutral-900 text-neutral-400"
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
+              tab === t.key ? "bg-indigo-500 text-white" : "bg-neutral-900 text-neutral-400"
             }`}
           >
-            {t}
+            {t.label}
           </button>
         ))}
       </div>
@@ -137,11 +144,19 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 pb-6">
         {!data ? (
           <p className="mt-10 text-center text-sm text-neutral-500">Loading…</p>
-        ) : tab === "players" ? (
+        ) : tab === "totalWins" ? (
           <PlayerLeaderboard
             players={data.players}
             podSizeFilter={podSizeFilter}
             onSelectPlayer={(id, name) => setHistoryPlayer({ id, name })}
+            metric="wins"
+          />
+        ) : tab === "winRate" ? (
+          <PlayerLeaderboard
+            players={data.players}
+            podSizeFilter={podSizeFilter}
+            onSelectPlayer={(id, name) => setHistoryPlayer({ id, name })}
+            metric="winRate"
           />
         ) : tab === "decks" ? (
           <DeckLeaderboard decks={data.decks} podSizeFilter={podSizeFilter} />
@@ -165,10 +180,12 @@ function PlayerLeaderboard({
   players,
   podSizeFilter,
   onSelectPlayer,
+  metric,
 }: {
   players: ReportingData["players"];
   podSizeFilter: number | null;
   onSelectPlayer: (id: string, name: string) => void;
+  metric: "wins" | "winRate";
 }) {
   if (players.length === 0) {
     return (
@@ -181,9 +198,14 @@ function PlayerLeaderboard({
       />
     );
   }
+  const sorted = [...players].sort((a, b) =>
+    metric === "wins"
+      ? b.wins - a.wins || b.winRate - a.winRate
+      : b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed
+  );
   return (
     <div className="flex flex-col gap-2">
-      {players.map((p, i) => (
+      {sorted.map((p, i) => (
         <button
           key={p.id}
           onClick={() => onSelectPlayer(p.id, p.name)}
@@ -200,7 +222,7 @@ function PlayerLeaderboard({
             </div>
           </div>
           <span className="text-lg font-black tabular-nums text-emerald-400">
-            {pct(p.winRate)}
+            {metric === "wins" ? p.wins : pct(p.winRate)}
           </span>
         </button>
       ))}
