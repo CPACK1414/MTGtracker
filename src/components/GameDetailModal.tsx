@@ -71,7 +71,12 @@ export default function GameDetailModal({
                   className="rounded-2xl border border-neutral-800 bg-neutral-800/40 px-4 py-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-semibold text-white">{p.playerName}</span>
+                    <span className="truncate font-semibold text-white">
+                      {p.playerName}
+                      {p.playerScreenName && (
+                        <span className="font-normal text-neutral-500"> ({p.playerScreenName})</span>
+                      )}
+                    </span>
                     <span
                       className={`shrink-0 text-sm font-black ${
                         p.won

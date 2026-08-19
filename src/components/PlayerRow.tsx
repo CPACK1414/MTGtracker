@@ -14,7 +14,7 @@ export default function PlayerRow({
   onRemoveDeck,
 }: {
   player: PlayerProfile;
-  onRename: (name: string) => void;
+  onRename: (name: string, screenName: string | null) => void;
   onDelete: () => void;
   onAddDeck: (name: string, commander: string, colors: string) => void;
   onEditDeck: (deckId: string, name: string, commander: string, colors: string) => void;
@@ -23,51 +23,81 @@ export default function PlayerRow({
   const [expanded, setExpanded] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState(player.name);
+  const [draftScreenName, setDraftScreenName] = useState(player.screenName ?? "");
   const [addingDeck, setAddingDeck] = useState(false);
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
 
+  function startRenaming() {
+    setDraftName(player.name);
+    setDraftScreenName(player.screenName ?? "");
+    setRenaming(true);
+  }
+
+  function saveRenaming() {
+    onRename(draftName.trim() || player.name, draftScreenName.trim() || null);
+    setRenaming(false);
+  }
+
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900">
-      <div className="flex items-center gap-3 p-3">
-        {renaming ? (
+      {renaming ? (
+        <div className="flex flex-col gap-2 p-3">
           <input
             autoFocus
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
-            onBlur={() => {
-              onRename(draftName.trim() || player.name);
-              setRenaming(false);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            className="min-w-0 flex-1 rounded-lg bg-neutral-800 px-2 py-1 text-base font-semibold text-white outline-none"
+            placeholder="Name"
+            className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
           />
-        ) : (
+          <input
+            value={draftScreenName}
+            onChange={(e) => setDraftScreenName(e.target.value)}
+            placeholder="Screen Name (shown in game)"
+            className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setRenaming(false)}
+              className="flex-1 rounded-lg bg-neutral-700 py-2 text-sm font-semibold text-neutral-300 active:scale-95"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveRenaming}
+              className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 p-3">
           <button
-            onClick={() => {
-              setDraftName(player.name);
-              setRenaming(true);
-            }}
+            onClick={startRenaming}
             className="min-w-0 flex-1 truncate text-left text-base font-semibold text-neutral-100"
           >
             {player.name}
+            {player.screenName && (
+              <span className="ml-1 font-normal text-neutral-500">({player.screenName})</span>
+            )}
           </button>
-        )}
 
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-neutral-400"
-        >
-          Decks ({player.decks.length}) {expanded ? "▾" : "▸"}
-        </button>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-neutral-400"
+          >
+            Decks ({player.decks.length}) {expanded ? "▾" : "▸"}
+          </button>
 
-        <button
-          onClick={onDelete}
-          aria-label="Delete player"
-          className="shrink-0 rounded-full px-2 py-1.5 text-sm text-red-400/70"
-        >
-          🗑
-        </button>
-      </div>
+          <button
+            onClick={onDelete}
+            aria-label="Delete player"
+            className="shrink-0 rounded-full px-2 py-1.5 text-sm text-red-400/70"
+          >
+            🗑
+          </button>
+        </div>
+      )}
 
       {expanded && (
         <div className="flex flex-col gap-2 border-t border-neutral-800 p-3">

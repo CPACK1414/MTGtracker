@@ -44,6 +44,7 @@ export default function PodSetupScreen({
         return {
           profileId: p.id,
           name: p.name,
+          screenName: p.screenName,
           deckId: dId,
           deckName: deck?.name,
           commander: deck?.commander ?? undefined,

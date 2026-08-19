@@ -36,8 +36,12 @@ export async function createPlayer(name: string): Promise<PlayerProfile> {
   return { ...player, decks: [] };
 }
 
-export async function renamePlayer(id: string, name: string): Promise<void> {
-  await db.update(players).set({ name }).where(eq(players.id, id));
+export async function renamePlayer(
+  id: string,
+  name: string,
+  screenName: string | null
+): Promise<void> {
+  await db.update(players).set({ name, screenName }).where(eq(players.id, id));
 }
 
 export async function deletePlayer(id: string): Promise<void> {
@@ -150,6 +154,7 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
 export type PlayerStats = {
   id: string;
   name: string;
+  screenName: string | null;
   gamesPlayed: number;
   wins: number;
   winRate: number;
@@ -219,6 +224,7 @@ export async function getReportingData(
       return {
         id: p.id,
         name: p.name,
+        screenName: p.screenName,
         gamesPlayed: played.length,
         wins,
         winRate: played.length ? wins / played.length : 0,
@@ -337,6 +343,7 @@ export async function getPlayerGameHistory(playerId: string): Promise<PlayerGame
 export type GameDetailParticipant = {
   playerId: string;
   playerName: string;
+  playerScreenName: string | null;
   deckName: string | null;
   commander: string | null;
   placement: number | null;
@@ -379,6 +386,7 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
       return {
         playerId: p.playerId,
         playerName: playersById.get(p.playerId)?.name ?? "Unknown",
+        playerScreenName: playersById.get(p.playerId)?.screenName ?? null,
         deckName: deck?.name ?? null,
         commander: deck?.commander ?? null,
         placement: p.placement,
@@ -404,6 +412,7 @@ export type GameHistoryEntry = {
   podSize: number;
   durationSeconds: number | null;
   winnerName: string | null;
+  winnerScreenName: string | null;
 };
 
 export async function getGameHistory(
@@ -426,13 +435,14 @@ export async function getGameHistory(
   const winnerRows = winnerIds.length
     ? await db.select().from(players).where(inArray(players.id, winnerIds))
     : [];
-  const winnersById = new Map(winnerRows.map((p) => [p.id, p.name]));
+  const winnersById = new Map(winnerRows.map((p) => [p.id, p]));
 
   return filtered.map((g) => ({
     gameId: g.id,
     playedAt: g.playedAt.toISOString(),
     podSize: g.podSize,
     durationSeconds: g.durationSeconds,
-    winnerName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId) ?? null : null,
+    winnerName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId)?.name ?? null : null,
+    winnerScreenName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId)?.screenName ?? null : null,
   }));
 }

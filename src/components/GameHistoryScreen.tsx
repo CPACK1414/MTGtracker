@@ -153,7 +153,20 @@ export default function GameHistoryScreen({ onBack }: { onBack: () => void }) {
                     {formatPlayedAt(g.playedAt)}
                   </span>
                   <span className="shrink-0 text-sm font-black text-emerald-400">
-                    {g.winnerName ? `${g.winnerName} won` : "No winner"}
+                    {g.winnerName ? (
+                      <>
+                        {g.winnerName}
+                        {g.winnerScreenName && (
+                          <span className="font-normal text-emerald-400/70">
+                            {" "}
+                            ({g.winnerScreenName})
+                          </span>
+                        )}{" "}
+                        won
+                      </>
+                    ) : (
+                      "No winner"
+                    )}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-neutral-500">

@@ -40,7 +40,11 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-  const [historyPlayer, setHistoryPlayer] = useState<{ id: string; name: string } | null>(null);
+  const [historyPlayer, setHistoryPlayer] = useState<{
+    id: string;
+    name: string;
+    screenName: string | null;
+  } | null>(null);
 
   const dateRange: DateRange | null = useMemo(() => {
     if (timeRange === "all") return null;
@@ -148,14 +152,14 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
           <PlayerLeaderboard
             players={data.players}
             podSizeFilter={podSizeFilter}
-            onSelectPlayer={(id, name) => setHistoryPlayer({ id, name })}
+            onSelectPlayer={(id, name, screenName) => setHistoryPlayer({ id, name, screenName })}
             metric="wins"
           />
         ) : tab === "winRate" ? (
           <PlayerLeaderboard
             players={data.players}
             podSizeFilter={podSizeFilter}
-            onSelectPlayer={(id, name) => setHistoryPlayer({ id, name })}
+            onSelectPlayer={(id, name, screenName) => setHistoryPlayer({ id, name, screenName })}
             metric="winRate"
           />
         ) : tab === "decks" ? (
@@ -169,6 +173,7 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         <PlayerHistoryModal
           playerId={historyPlayer.id}
           playerName={historyPlayer.name}
+          playerScreenName={historyPlayer.screenName}
           onClose={() => setHistoryPlayer(null)}
         />
       )}
@@ -184,7 +189,7 @@ function PlayerLeaderboard({
 }: {
   players: ReportingData["players"];
   podSizeFilter: number | null;
-  onSelectPlayer: (id: string, name: string) => void;
+  onSelectPlayer: (id: string, name: string, screenName: string | null) => void;
   metric: "wins" | "winRate";
 }) {
   if (players.length === 0) {
@@ -208,13 +213,18 @@ function PlayerLeaderboard({
       {sorted.map((p, i) => (
         <button
           key={p.id}
-          onClick={() => onSelectPlayer(p.id, p.name)}
+          onClick={() => onSelectPlayer(p.id, p.name, p.screenName)}
           className="flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-left active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
             <span className="w-5 text-sm font-bold text-neutral-500">{i + 1}</span>
             <div>
-              <p className="font-semibold text-white">{p.name}</p>
+              <p className="font-semibold text-white">
+                {p.name}
+                {p.screenName && (
+                  <span className="ml-1 font-normal text-neutral-500">({p.screenName})</span>
+                )}
+              </p>
               <p className="text-xs text-neutral-500">
                 {p.wins}W – {p.gamesPlayed - p.wins}L · {p.gamesPlayed} game
                 {p.gamesPlayed === 1 ? "" : "s"}

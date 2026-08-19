@@ -13,6 +13,7 @@ export type Player = {
 export type PodSelection = {
   profileId: string;
   name: string;
+  screenName?: string | null;
   deckId: string | null;
   deckName?: string;
   commander?: string;
@@ -30,7 +31,7 @@ export function makePlayers(selections: PodSelection[]): Player[] {
     id: s.profileId,
     profileId: s.profileId,
     deckId: s.deckId,
-    name: s.name,
+    name: s.screenName?.trim() || s.name,
     deckName: s.deckName,
     commander: s.commander,
     life: STARTING_LIFE,

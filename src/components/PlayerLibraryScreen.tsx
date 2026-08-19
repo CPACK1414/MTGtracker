@@ -47,10 +47,10 @@ export default function PlayerLibraryScreen({
     }
   }
 
-  function handleRename(id: string, name: string) {
-    onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
+  function handleRename(id: string, name: string, screenName: string | null) {
+    onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name, screenName } : p)));
     startTransition(() => {
-      renamePlayer(id, name);
+      renamePlayer(id, name, screenName);
     });
   }
 
@@ -146,7 +146,7 @@ export default function PlayerLibraryScreen({
             <PlayerRow
               key={p.id}
               player={p}
-              onRename={(name) => handleRename(p.id, name)}
+              onRename={(name, screenName) => handleRename(p.id, name, screenName)}
               onDelete={() => removePlayer(p.id)}
               onAddDeck={(name, commander, colors) => addDeck(p.id, name, commander, colors)}
               onEditDeck={(deckId, name, commander, colors) =>

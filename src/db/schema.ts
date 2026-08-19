@@ -3,6 +3,7 @@ import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core";
 export const players = pgTable("players", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  screenName: text("screen_name"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

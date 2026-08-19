@@ -32,10 +32,12 @@ function ordinal(n: number): string {
 export default function PlayerHistoryModal({
   playerId,
   playerName,
+  playerScreenName,
   onClose,
 }: {
   playerId: string;
   playerName: string;
+  playerScreenName?: string | null;
   onClose: () => void;
 }) {
   const [games, setGames] = useState<PlayerGameHistoryEntry[] | null>(null);
@@ -50,7 +52,13 @@ export default function PlayerHistoryModal({
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 sm:items-center sm:justify-center">
       <div className="flex max-h-[85vh] flex-col gap-3 overflow-y-auto rounded-t-3xl bg-neutral-900 p-5 sm:w-full sm:max-w-sm sm:rounded-3xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">{playerName}&apos;s Games</h2>
+          <h2 className="text-lg font-bold text-white">
+            {playerName}
+            {playerScreenName && (
+              <span className="font-normal text-neutral-500"> ({playerScreenName})</span>
+            )}
+            &apos;s Games
+          </h2>
           <button
             onClick={onClose}
             className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white active:scale-95"
