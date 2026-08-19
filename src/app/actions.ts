@@ -333,3 +333,67 @@ export async function getPlayerGameHistory(playerId: string): Promise<PlayerGame
     };
   });
 }
+
+export type GameDetailParticipant = {
+  playerId: string;
+  playerName: string;
+  deckName: string | null;
+  commander: string | null;
+  placement: number | null;
+  finalLife: number | null;
+  eliminationReason: "dead" | "scoop" | null;
+  won: boolean;
+};
+
+export type GameDetail = {
+  gameId: string;
+  playedAt: string;
+  podSize: number;
+  durationSeconds: number | null;
+  participants: GameDetailParticipant[];
+};
+
+export async function getGameDetail(gameId: string): Promise<GameDetail | null> {
+  const [game] = await db.select().from(games).where(eq(games.id, gameId));
+  if (!game) return null;
+
+  const participantRows = await db
+    .select()
+    .from(gameParticipants)
+    .where(eq(gameParticipants.gameId, gameId));
+
+  const playerIds = participantRows.map((p) => p.playerId);
+  const deckIds = participantRows.map((p) => p.deckId).filter((x): x is string => Boolean(x));
+
+  const [playerRows, deckRows] = await Promise.all([
+    playerIds.length ? db.select().from(players).where(inArray(players.id, playerIds)) : [],
+    deckIds.length ? db.select().from(decks).where(inArray(decks.id, deckIds)) : [],
+  ]);
+
+  const playersById = new Map(playerRows.map((p) => [p.id, p]));
+  const decksById = new Map(deckRows.map((d) => [d.id, d]));
+
+  const participants: GameDetailParticipant[] = participantRows
+    .map((p) => {
+      const deck = p.deckId ? decksById.get(p.deckId) : undefined;
+      return {
+        playerId: p.playerId,
+        playerName: playersById.get(p.playerId)?.name ?? "Unknown",
+        deckName: deck?.name ?? null,
+        commander: deck?.commander ?? null,
+        placement: p.placement,
+        finalLife: p.finalLife,
+        eliminationReason: p.eliminationReason as "dead" | "scoop" | null,
+        won: game.winnerPlayerId === p.playerId,
+      };
+    })
+    .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99));
+
+  return {
+    gameId: game.id,
+    playedAt: game.playedAt.toISOString(),
+    podSize: game.podSize,
+    durationSeconds: game.durationSeconds,
+    participants,
+  };
+}

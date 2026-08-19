@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPlayerGameHistory, type PlayerGameHistoryEntry } from "@/app/actions";
+import GameDetailModal from "@/components/GameDetailModal";
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
@@ -38,6 +39,7 @@ export default function PlayerHistoryModal({
   onClose: () => void;
 }) {
   const [games, setGames] = useState<PlayerGameHistoryEntry[] | null>(null);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
     setGames(null);
@@ -64,9 +66,10 @@ export default function PlayerHistoryModal({
         ) : (
           <div className="flex flex-col gap-2">
             {games.map((g) => (
-              <div
+              <button
                 key={g.gameId}
-                className="rounded-2xl border border-neutral-800 bg-neutral-800/40 px-4 py-3"
+                onClick={() => setSelectedGameId(g.gameId)}
+                className="rounded-2xl border border-neutral-800 bg-neutral-800/40 px-4 py-3 text-left active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-neutral-200">
@@ -94,11 +97,15 @@ export default function PlayerHistoryModal({
                   <span className="truncate">{g.podSize}-player pod</span>
                   <span className="shrink-0 tabular-nums">{formatDuration(g.durationSeconds)}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {selectedGameId && (
+        <GameDetailModal gameId={selectedGameId} onClose={() => setSelectedGameId(null)} />
+      )}
     </div>
   );
 }
