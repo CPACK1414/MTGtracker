@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getLayoutTemplate, gridTemplateAreas } from "@/lib/layout";
 import type { PodSelection } from "@/lib/types";
+import RotatableCard from "@/components/RotatableCard";
 
 export default function SeatAssignScreen({
   selections,
@@ -73,19 +74,36 @@ export default function SeatAssignScreen({
             minHeight: 280,
           }}
         >
-          {template.placements.map((placement, i) => (
+          {template.placements.map((placement, i) => {
+            const seatedSelection = selections.find((s) => s.profileId === seatPlayerIds[i]);
+            const artUrl = seatedSelection?.artCropUrl;
+            return (
             <div
               key={i}
               style={{ gridArea: placement.area }}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-neutral-800 p-3"
+              className="relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl bg-neutral-800 p-3"
             >
+              {artUrl && (
+                <div className="absolute inset-0">
+                  <RotatableCard rotation={placement.rotation} style={{ width: "100%", height: "100%" }}>
+                    <div
+                      className="h-full w-full"
+                      style={{
+                        backgroundImage: `linear-gradient(rgba(23,23,23,0.55), rgba(23,23,23,0.75)), url("${artUrl}")`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }}
+                    />
+                  </RotatableCard>
+                </div>
+              )}
               <span
-                className="text-xl text-neutral-500"
+                className="relative z-10 text-xl text-neutral-500"
                 style={{ display: "inline-block", transform: `rotate(${(placement.rotation + 180) % 360}deg)` }}
               >
                 ▲
               </span>
-              <div className="flex w-full items-center gap-1">
+              <div className="relative z-10 flex w-full items-center gap-1">
                 <select
                   value={seatPlayerIds[i] ?? ""}
                   onChange={(e) => assign(i, e.target.value)}
@@ -113,7 +131,8 @@ export default function SeatAssignScreen({
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
