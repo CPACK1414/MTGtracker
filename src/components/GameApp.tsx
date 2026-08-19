@@ -23,6 +23,7 @@ import CounterModal from "@/components/CounterModal";
 import StatsScreen from "@/components/StatsScreen";
 import GameTimer from "@/components/GameTimer";
 import GameHistoryScreen from "@/components/GameHistoryScreen";
+import { useWakeLock } from "@/lib/useWakeLock";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
 type CounterMap = Record<string, number>;
@@ -30,6 +31,7 @@ type CounterMap = Record<string, number>;
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
+  useWakeLock(Boolean(players));
   const [homeScreen, setHomeScreen] = useState<HomeScreen>("welcome");
   const [damage, setDamage] = useState<Record<string, Record<string, number>>>({});
   const [poison, setPoison] = useState<CounterMap>({});
