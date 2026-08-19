@@ -200,15 +200,10 @@ export type DeckStats = {
   winRate: number;
 };
 
-export type DeckMatchup = {
-  deckAId: string;
-  deckAName: string;
-  deckAPlayerName: string;
-  deckBId: string;
-  deckBName: string;
-  deckBPlayerName: string;
-  aWins: number;
-  bWins: number;
+export type DeckGroupMatchup = {
+  key: string;
+  decks: { id: string; name: string; playerName: string; wins: number }[];
+  gamesPlayed: number;
 };
 
 export type PlayerGroupMatchup = {
@@ -220,7 +215,7 @@ export type PlayerGroupMatchup = {
 export type ReportingData = {
   players: PlayerStats[];
   decks: DeckStats[];
-  deckMatchups: DeckMatchup[];
+  deckMatchups: DeckGroupMatchup[];
   playerMatchups: PlayerGroupMatchup[];
 };
 
@@ -287,40 +282,37 @@ export async function getReportingData(
     .filter((d) => d.gamesPlayed > 0)
     .sort((a, b) => b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed);
 
-  const matchupMap = new Map<string, DeckMatchup>();
+  const deckGroupMap = new Map<string, DeckGroupMatchup>();
   for (const game of allGames) {
-    if (!game.winnerDeckId) continue;
     const gp = allParticipants.filter((p) => p.gameId === game.id);
-    const distinctDecks = new Set(
-      gp.map((p) => p.deckId).filter((x): x is string => Boolean(x))
-    );
-    if (distinctDecks.size < 2) continue;
-
-    for (const p of gp) {
-      if (!p.deckId || p.deckId === game.winnerDeckId) continue;
-      const [a, b] = [game.winnerDeckId, p.deckId].sort();
-      const key = `${a}|${b}`;
-      let m = matchupMap.get(key);
-      if (!m) {
-        m = {
-          deckAId: a,
-          deckAName: decksById.get(a)?.name ?? "Unknown deck",
-          deckAPlayerName: playersById.get(decksById.get(a)?.playerId ?? "")?.name ?? "",
-          deckBId: b,
-          deckBName: decksById.get(b)?.name ?? "Unknown deck",
-          deckBPlayerName: playersById.get(decksById.get(b)?.playerId ?? "")?.name ?? "",
-          aWins: 0,
-          bWins: 0,
-        };
-        matchupMap.set(key, m);
-      }
-      if (a === game.winnerDeckId) m.aWins += 1;
-      else m.bWins += 1;
+    const distinctDeckIds = Array.from(
+      new Set(gp.map((p) => p.deckId).filter((x): x is string => Boolean(x)))
+    ).sort();
+    if (distinctDeckIds.length < 2) continue;
+    const key = distinctDeckIds.join("|");
+    let group = deckGroupMap.get(key);
+    if (!group) {
+      group = {
+        key,
+        decks: distinctDeckIds.map((id) => ({
+          id,
+          name: decksById.get(id)?.name ?? "Unknown deck",
+          playerName: playersById.get(decksById.get(id)?.playerId ?? "")?.name ?? "",
+          wins: 0,
+        })),
+        gamesPlayed: 0,
+      };
+      deckGroupMap.set(key, group);
+    }
+    group.gamesPlayed += 1;
+    if (game.winnerDeckId) {
+      const winner = group.decks.find((d) => d.id === game.winnerDeckId);
+      if (winner) winner.wins += 1;
     }
   }
 
-  const deckMatchups = Array.from(matchupMap.values()).sort(
-    (a, b) => b.aWins + b.bWins - (a.aWins + a.bWins)
+  const deckMatchups = Array.from(deckGroupMap.values()).sort(
+    (a, b) => b.gamesPlayed - a.gamesPlayed
   );
 
   const groupMap = new Map<string, PlayerGroupMatchup>();

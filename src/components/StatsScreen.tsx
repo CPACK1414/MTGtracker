@@ -333,36 +333,36 @@ function DeckMatchupTable({
   }
   return (
     <div className="flex flex-col gap-2">
-      {matchups.map((m) => {
-        const total = m.aWins + m.bWins;
-        const aPct = total ? (m.aWins / total) * 100 : 50;
-        return (
-          <div
-            key={`${m.deckAId}-${m.deckBId}`}
-            className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3"
-          >
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{m.deckAName}</p>
-                <p className="truncate text-xs text-neutral-500">{m.deckAPlayerName}</p>
-              </div>
-              <span className="shrink-0 font-black tabular-nums text-neutral-300">
-                {m.aWins} – {m.bWins}
-              </span>
-              <div className="min-w-0 text-right">
-                <p className="truncate font-semibold text-white">{m.deckBName}</p>
-                <p className="truncate text-xs text-neutral-500">{m.deckBPlayerName}</p>
-              </div>
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-800">
-              <div
-                className="h-full bg-emerald-500"
-                style={{ width: `${aPct}%` }}
-              />
-            </div>
+      {matchups.map((group) => (
+        <div
+          key={group.key}
+          className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3"
+        >
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            {group.gamesPlayed} game{group.gamesPlayed === 1 ? "" : "s"}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {[...group.decks]
+              .sort((a, b) => b.wins - a.wins)
+              .map((d) => {
+                const losses = group.gamesPlayed - d.wins;
+                const rate = group.gamesPlayed ? d.wins / group.gamesPlayed : 0;
+                return (
+                  <div key={d.id} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white">{d.name}</p>
+                      <p className="truncate text-xs text-neutral-500">{d.playerName}</p>
+                    </div>
+                    <span className="shrink-0 tabular-nums text-neutral-400">
+                      {d.wins}W – {losses}L
+                      <span className="ml-1 font-bold text-emerald-400">{pct(rate)}</span>
+                    </span>
+                  </div>
+                );
+              })}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
