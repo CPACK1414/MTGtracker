@@ -2,7 +2,7 @@
 
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { commanderDamage, decks, gameParticipants, games, players } from "@/db/schema";
+import { commanderDamage, decks, gameEvents, gameParticipants, games, players } from "@/db/schema";
 import { STARTING_LIFE } from "@/lib/types";
 import type { Deck, PlayerProfile } from "@/lib/library";
 
@@ -136,6 +136,16 @@ export async function deleteDeck(deckId: string): Promise<void> {
   }
 }
 
+export type GameEventInput = {
+  elapsedSeconds: number;
+  type: "change" | "eliminated" | "revived";
+  playerId: string;
+  lifeDelta?: number;
+  poisonDelta?: number;
+  radiationDelta?: number;
+  eliminationReason?: "dead" | "scoop" | null;
+};
+
 export type SaveGamePayload = {
   podSize: number;
   durationSeconds: number;
@@ -150,6 +160,7 @@ export type SaveGamePayload = {
     eliminationReason: "dead" | "scoop" | null;
   }[];
   damage: { fromPlayerId: string; toPlayerId: string; amount: number }[];
+  events: GameEventInput[];
 };
 
 export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }> {
@@ -187,6 +198,21 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
           dealtByPlayerId: d.fromPlayerId,
           dealtToPlayerId: d.toPlayerId,
           amount: d.amount,
+        }))
+      );
+    }
+
+    if (payload.events.length > 0) {
+      await tx.insert(gameEvents).values(
+        payload.events.map((e) => ({
+          gameId: game.id,
+          elapsedSeconds: e.elapsedSeconds,
+          type: e.type,
+          playerId: e.playerId,
+          lifeDelta: e.lifeDelta ?? null,
+          poisonDelta: e.poisonDelta ?? null,
+          radiationDelta: e.radiationDelta ?? null,
+          eliminationReason: e.eliminationReason ?? null,
         }))
       );
     }
@@ -482,6 +508,46 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
     durationSeconds: game.durationSeconds,
     participants,
   };
+}
+
+export type GamePlayByPlayEntry = {
+  id: string;
+  elapsedSeconds: number;
+  type: "change" | "eliminated" | "revived";
+  playerId: string;
+  playerName: string;
+  playerScreenName: string | null;
+  lifeDelta: number | null;
+  poisonDelta: number | null;
+  radiationDelta: number | null;
+  eliminationReason: "dead" | "scoop" | null;
+};
+
+export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayEntry[]> {
+  const rows = await db
+    .select()
+    .from(gameEvents)
+    .where(eq(gameEvents.gameId, gameId))
+    .orderBy(gameEvents.elapsedSeconds);
+
+  const playerIds = Array.from(new Set(rows.map((r) => r.playerId)));
+  const playerRows = playerIds.length
+    ? await db.select().from(players).where(inArray(players.id, playerIds))
+    : [];
+  const playersById = new Map(playerRows.map((p) => [p.id, p]));
+
+  return rows.map((r) => ({
+    id: r.id,
+    elapsedSeconds: r.elapsedSeconds,
+    type: r.type as "change" | "eliminated" | "revived",
+    playerId: r.playerId,
+    playerName: playersById.get(r.playerId)?.name ?? "Unknown",
+    playerScreenName: playersById.get(r.playerId)?.screenName ?? null,
+    lifeDelta: r.lifeDelta,
+    poisonDelta: r.poisonDelta,
+    radiationDelta: r.radiationDelta,
+    eliminationReason: r.eliminationReason as "dead" | "scoop" | null,
+  }));
 }
 
 export type GameHistoryEntry = {

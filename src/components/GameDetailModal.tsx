@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getGameDetail, type GameDetail } from "@/app/actions";
+import PlayByPlayModal from "@/components/PlayByPlayModal";
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
@@ -36,6 +37,7 @@ export default function GameDetailModal({
   onClose: () => void;
 }) {
   const [detail, setDetail] = useState<GameDetail | null>(null);
+  const [showPlayByPlay, setShowPlayByPlay] = useState(false);
 
   useEffect(() => {
     setDetail(null);
@@ -63,6 +65,13 @@ export default function GameDetailModal({
               {formatPlayedAt(detail.playedAt)} · {detail.podSize}-player pod ·{" "}
               {formatDuration(detail.durationSeconds)}
             </p>
+
+            <button
+              onClick={() => setShowPlayByPlay(true)}
+              className="rounded-xl bg-neutral-800 py-2 text-sm font-semibold text-neutral-300 active:scale-95"
+            >
+              📜 Play by Play
+            </button>
 
             <div className="flex flex-col gap-2">
               {detail.participants.map((p) => (
@@ -107,6 +116,10 @@ export default function GameDetailModal({
           </>
         )}
       </div>
+
+      {showPlayByPlay && (
+        <PlayByPlayModal gameId={gameId} onClose={() => setShowPlayByPlay(false)} />
+      )}
     </div>
   );
 }

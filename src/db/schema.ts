@@ -47,6 +47,22 @@ export const gameParticipants = pgTable("game_participants", {
   eliminationReason: text("elimination_reason"),
 });
 
+export const gameEvents = pgTable("game_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gameId: uuid("game_id")
+    .notNull()
+    .references(() => games.id, { onDelete: "cascade" }),
+  elapsedSeconds: integer("elapsed_seconds").notNull(),
+  type: text("type").notNull(),
+  playerId: uuid("player_id")
+    .notNull()
+    .references(() => players.id),
+  lifeDelta: integer("life_delta"),
+  poisonDelta: integer("poison_delta"),
+  radiationDelta: integer("radiation_delta"),
+  eliminationReason: text("elimination_reason"),
+});
+
 export const commanderDamage = pgTable("commander_damage", {
   id: uuid("id").primaryKey().defaultRandom(),
   gameId: uuid("game_id")

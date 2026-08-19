@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   COMMANDER_DAMAGE_LETHAL,
   POISON_LETHAL,
@@ -10,7 +10,7 @@ import {
   type Player,
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
-import { saveGame } from "@/app/actions";
+import { saveGame, type GameEventInput } from "@/app/actions";
 import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
@@ -28,6 +28,9 @@ import { useConfirmUnload } from "@/lib/useConfirmUnload";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
 type CounterMap = Record<string, number>;
+type PendingChange = { life: number; poison: number; radiation: number };
+
+const CHANGE_BATCH_WINDOW_MS = 10000;
 
 export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
@@ -47,6 +50,70 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [rotations, setRotations] = useState<Record<string, Rotation>>({});
   const [counterModalPlayerId, setCounterModalPlayerId] = useState<string | null>(null);
   const [gameStartedAt, setGameStartedAt] = useState<number | null>(null);
+
+  const eventsRef = useRef<GameEventInput[]>([]);
+  const pendingChangesRef = useRef<Record<string, PendingChange>>({});
+  const pendingWindowStartRef = useRef<number | null>(null);
+  const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
+    };
+  }, []);
+
+  function elapsedSecondsNow(): number {
+    return gameStartedAt ? Math.max(0, Math.floor((Date.now() - gameStartedAt) / 1000)) : 0;
+  }
+
+  function flushPendingChanges() {
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current);
+      batchTimeoutRef.current = null;
+    }
+    const pending = pendingChangesRef.current;
+    const elapsedSeconds = pendingWindowStartRef.current ?? elapsedSecondsNow();
+    pendingChangesRef.current = {};
+    pendingWindowStartRef.current = null;
+
+    for (const [playerId, change] of Object.entries(pending)) {
+      if (change.life === 0 && change.poison === 0 && change.radiation === 0) continue;
+      eventsRef.current.push({
+        elapsedSeconds,
+        type: "change",
+        playerId,
+        lifeDelta: change.life,
+        poisonDelta: change.poison,
+        radiationDelta: change.radiation,
+      });
+    }
+  }
+
+  function queueChange(playerId: string, kind: keyof PendingChange, delta: number) {
+    if (delta === 0) return;
+    if (pendingWindowStartRef.current === null) {
+      pendingWindowStartRef.current = elapsedSecondsNow();
+    }
+    const current = pendingChangesRef.current[playerId] ?? { life: 0, poison: 0, radiation: 0 };
+    current[kind] += delta;
+    pendingChangesRef.current[playerId] = current;
+
+    if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
+    batchTimeoutRef.current = setTimeout(flushPendingChanges, CHANGE_BATCH_WINDOW_MS);
+  }
+
+  function logInstantEvent(
+    playerId: string,
+    type: "eliminated" | "revived",
+    eliminationReason?: "dead" | "scoop" | null
+  ) {
+    eventsRef.current.push({
+      elapsedSeconds: elapsedSecondsNow(),
+      type,
+      playerId,
+      eliminationReason: eliminationReason ?? null,
+    });
+  }
 
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
@@ -78,6 +145,12 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     });
     setRotations(initialRotations);
     setGameStartedAt(Date.now());
+
+    if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
+    batchTimeoutRef.current = null;
+    pendingChangesRef.current = {};
+    pendingWindowStartRef.current = null;
+    eventsRef.current = [];
   }
 
   function rotatePlayer(id: string) {
@@ -101,6 +174,12 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setCounterModalPlayerId(null);
     setGameStartedAt(null);
     setHomeScreen("welcome");
+
+    if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
+    batchTimeoutRef.current = null;
+    pendingChangesRef.current = {};
+    pendingWindowStartRef.current = null;
+    eventsRef.current = [];
   }
 
   function changeLife(id: string, delta: number) {
@@ -109,6 +188,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         ? prev.map((p) => (p.id === id ? { ...p, life: p.life + delta } : p))
         : prev
     );
+    queueChange(id, "life", delta);
   }
 
   function eliminatePlayer(id: string, reason: "dead" | "scoop") {
@@ -118,6 +198,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         : prev
     );
     setEliminationOrder((order) => (order.includes(id) ? order : [...order, id]));
+    logInstantEvent(id, "eliminated", reason);
   }
 
   function revivePlayer(id: string) {
@@ -129,6 +210,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         : prev
     );
     setEliminationOrder((order) => order.filter((x) => x !== id));
+    logInstantEvent(id, "revived");
   }
 
   function changeDamage(fromId: string, toId: string, delta: number) {
@@ -148,11 +230,23 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   function changePoison(id: string, delta: number) {
+    const current = poison[id] ?? 0;
+    const next = Math.max(0, current + delta);
+    const actualDelta = next - current;
+    if (actualDelta === 0) return;
+
     setPoison((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }));
+    queueChange(id, "poison", actualDelta);
   }
 
   function changeRadiation(id: string, delta: number) {
+    const current = radiation[id] ?? 0;
+    const next = Math.max(0, current + delta);
+    const actualDelta = next - current;
+    if (actualDelta === 0) return;
+
     setRadiation((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }));
+    queueChange(id, "radiation", actualDelta);
   }
 
   function placementsFor(winnerId: string): Record<string, number> {
@@ -194,6 +288,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       const durationSeconds = gameStartedAt
         ? Math.max(0, Math.floor((Date.now() - gameStartedAt) / 1000))
         : 0;
+      flushPendingChanges();
       await saveGame({
         podSize: players.length,
         durationSeconds,
@@ -208,6 +303,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           eliminationReason: p.eliminationReason ?? null,
         })),
         damage: damageRows,
+        events: eventsRef.current,
       });
       resetToSetup();
     } catch (e) {
