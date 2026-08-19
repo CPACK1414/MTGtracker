@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import type { Player } from "@/lib/types";
 import CounterChip from "@/components/CounterChip";
-import CounterBadge from "@/components/CounterBadge";
 import DamageGrid from "@/components/DamageGrid";
 
 export type OpponentDamage = {
@@ -11,6 +11,37 @@ export type OpponentDamage = {
   name: string;
   amount: number;
 };
+
+const HOLD_DELAY_MS = 450;
+const HOLD_INTERVAL_MS = 150;
+
+function useHoldRepeat() {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  function stop() {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    timeoutRef.current = null;
+    intervalRef.current = null;
+  }
+
+  function start(onTap: () => void, onRepeat: () => void) {
+    onTap();
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(onRepeat, HOLD_INTERVAL_MS);
+    }, HOLD_DELAY_MS);
+  }
+
+  return { start, stop };
+}
 
 export default function PlayerCard({
   player,
@@ -44,6 +75,8 @@ export default function PlayerCard({
   onOpenCounters: () => void;
 }) {
   const [confirmingElimination, setConfirmingElimination] = useState(false);
+  const minusHold = useHoldRepeat();
+  const plusHold = useHoldRepeat();
 
   const lifeColor =
     player.life <= 0
@@ -74,19 +107,40 @@ export default function PlayerCard({
       </div>
 
       {singleOpponent && (
-        <div className="mb-1 flex justify-center">
+        <div className="mb-1 flex items-center justify-center gap-2">
           <CounterChip
             label={singleOpponent.name}
             value={singleOpponent.amount}
             disabled={player.eliminated}
             onChange={(delta) => onChangeCommanderDamage(singleOpponent.id, delta)}
           />
+          <button
+            onClick={onOpenCounters}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-800 px-2 py-1.5 active:scale-95"
+          >
+            <Image
+              src="/poison-counter.png"
+              alt=""
+              width={10}
+              height={10}
+              className="h-2.5 w-2.5 object-contain"
+              style={{ filter: "invert(1)" }}
+            />
+            <span className="text-xs font-bold tabular-nums text-white">{poison}</span>
+            <span className="text-xs leading-none">☢</span>
+            <span className="text-xs font-bold tabular-nums text-white">{radiation}</span>
+          </button>
         </div>
       )}
 
       {!singleOpponent && groupOpponents && (
         <div className="mb-1 flex justify-center">
-          <DamageGrid opponents={groupOpponents} onOpen={onOpenCounters} />
+          <DamageGrid
+            opponents={groupOpponents}
+            poison={poison}
+            radiation={radiation}
+            onOpen={onOpenCounters}
+          />
         </div>
       )}
 
@@ -96,11 +150,6 @@ export default function PlayerCard({
             {player.name}
             {isFirst && <span className="ml-1">🎲</span>}
           </p>
-          {(player.deckName || player.commander) && (
-            <p className="truncate text-xs text-neutral-500">
-              {player.commander || player.deckName}
-            </p>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
@@ -153,39 +202,26 @@ export default function PlayerCard({
 
       <div className="flex-1" />
 
-      <div className="mb-1 flex justify-center gap-2">
-        <CounterBadge label="Poison" icon="/poison-counter.png" value={poison} onClick={onOpenCounters} />
-        <CounterBadge label="Radiation" emoji="☢" value={radiation} onClick={onOpenCounters} />
-      </div>
-
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           disabled={player.eliminated}
-          onClick={() => onChangeLife(-5)}
-          className="rounded-xl bg-neutral-800/60 py-2 text-sm font-semibold text-red-300 active:scale-95 disabled:opacity-30"
-        >
-          −5
-        </button>
-        <button
-          disabled={player.eliminated}
-          onClick={() => onChangeLife(-1)}
+          onPointerDown={() => minusHold.start(() => onChangeLife(-1), () => onChangeLife(-10))}
+          onPointerUp={minusHold.stop}
+          onPointerLeave={minusHold.stop}
+          onPointerCancel={minusHold.stop}
           className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-red-400 active:scale-95 disabled:opacity-30"
         >
           −
         </button>
         <button
           disabled={player.eliminated}
-          onClick={() => onChangeLife(1)}
+          onPointerDown={() => plusHold.start(() => onChangeLife(1), () => onChangeLife(10))}
+          onPointerUp={plusHold.stop}
+          onPointerLeave={plusHold.stop}
+          onPointerCancel={plusHold.stop}
           className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
         >
           +
-        </button>
-        <button
-          disabled={player.eliminated}
-          onClick={() => onChangeLife(5)}
-          className="rounded-xl bg-neutral-800/60 py-2 text-sm font-semibold text-emerald-300 active:scale-95 disabled:opacity-30"
-        >
-          +5
         </button>
       </div>
 
