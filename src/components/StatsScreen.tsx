@@ -5,13 +5,18 @@ import { getReportingData, type DateRange, type ReportingData } from "@/app/acti
 import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
 import PlayerHistoryModal from "@/components/PlayerHistoryModal";
 
-type Tab = "totalWins" | "winRate" | "decks" | "matchups";
+type Scope = "player" | "deck";
+type Mode = "totalWins" | "winRate" | "matchups";
 type TimeRangeKey = "all" | "7d" | "30d" | "90d" | "1y" | "custom";
 
-const TABS: { key: Tab; label: string }[] = [
+const SCOPES: { key: Scope; label: string }[] = [
+  { key: "player", label: "Player" },
+  { key: "deck", label: "Deck" },
+];
+
+const MODES: { key: Mode; label: string }[] = [
   { key: "totalWins", label: "Total Wins" },
   { key: "winRate", label: "Win Rate" },
-  { key: "decks", label: "Decks" },
   { key: "matchups", label: "Matchups" },
 ];
 
@@ -33,9 +38,14 @@ function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
 }
 
+function displayName(name: string, screenName?: string | null) {
+  return screenName ? `${name} (${screenName})` : name;
+}
+
 export default function StatsScreen({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<ReportingData | null>(null);
-  const [tab, setTab] = useState<Tab>("totalWins");
+  const [scope, setScope] = useState<Scope>("player");
+  const [mode, setMode] = useState<Mode>("totalWins");
   const [podSizeFilter, setPodSizeFilter] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("all");
   const [customFrom, setCustomFrom] = useState("");
@@ -131,16 +141,30 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <div className="flex gap-1 overflow-x-auto px-4 py-3">
-        {TABS.map((t) => (
+      <div className="flex gap-1 overflow-x-auto px-4 pt-3">
+        {SCOPES.map((s) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={s.key}
+            onClick={() => setScope(s.key)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
-              tab === t.key ? "bg-indigo-500 text-white" : "bg-neutral-900 text-neutral-400"
+              scope === s.key ? "bg-amber-500 text-white" : "bg-neutral-900 text-neutral-400"
             }`}
           >
-            {t.label}
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1 overflow-x-auto px-4 py-3">
+        {MODES.map((m) => (
+          <button
+            key={m.key}
+            onClick={() => setMode(m.key)}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
+              mode === m.key ? "bg-indigo-500 text-white" : "bg-neutral-900 text-neutral-400"
+            }`}
+          >
+            {m.label}
           </button>
         ))}
       </div>
@@ -148,24 +172,21 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 pb-6">
         {!data ? (
           <p className="mt-10 text-center text-sm text-neutral-500">Loading…</p>
-        ) : tab === "totalWins" ? (
+        ) : mode === "matchups" ? (
+          scope === "player" ? (
+            <PlayerMatchupTable matchups={data.playerMatchups} podSizeFilter={podSizeFilter} />
+          ) : (
+            <DeckMatchupTable matchups={data.deckMatchups} podSizeFilter={podSizeFilter} />
+          )
+        ) : scope === "player" ? (
           <PlayerLeaderboard
             players={data.players}
             podSizeFilter={podSizeFilter}
             onSelectPlayer={(id, name, screenName) => setHistoryPlayer({ id, name, screenName })}
-            metric="wins"
+            metric={mode}
           />
-        ) : tab === "winRate" ? (
-          <PlayerLeaderboard
-            players={data.players}
-            podSizeFilter={podSizeFilter}
-            onSelectPlayer={(id, name, screenName) => setHistoryPlayer({ id, name, screenName })}
-            metric="winRate"
-          />
-        ) : tab === "decks" ? (
-          <DeckLeaderboard decks={data.decks} podSizeFilter={podSizeFilter} />
         ) : (
-          <MatchupTable matchups={data.matchups} podSizeFilter={podSizeFilter} />
+          <DeckLeaderboard decks={data.decks} podSizeFilter={podSizeFilter} metric={mode} />
         )}
       </div>
 
@@ -190,7 +211,7 @@ function PlayerLeaderboard({
   players: ReportingData["players"];
   podSizeFilter: number | null;
   onSelectPlayer: (id: string, name: string, screenName: string | null) => void;
-  metric: "wins" | "winRate";
+  metric: "totalWins" | "winRate";
 }) {
   if (players.length === 0) {
     return (
@@ -204,7 +225,7 @@ function PlayerLeaderboard({
     );
   }
   const sorted = [...players].sort((a, b) =>
-    metric === "wins"
+    metric === "totalWins"
       ? b.wins - a.wins || b.winRate - a.winRate
       : b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed
   );
@@ -232,7 +253,7 @@ function PlayerLeaderboard({
             </div>
           </div>
           <span className="text-lg font-black tabular-nums text-emerald-400">
-            {metric === "wins" ? p.wins : pct(p.winRate)}
+            {metric === "totalWins" ? p.wins : pct(p.winRate)}
           </span>
         </button>
       ))}
@@ -243,9 +264,11 @@ function PlayerLeaderboard({
 function DeckLeaderboard({
   decks,
   podSizeFilter,
+  metric,
 }: {
   decks: ReportingData["decks"];
   podSizeFilter: number | null;
+  metric: "totalWins" | "winRate";
 }) {
   if (decks.length === 0) {
     return (
@@ -258,9 +281,14 @@ function DeckLeaderboard({
       />
     );
   }
+  const sorted = [...decks].sort((a, b) =>
+    metric === "totalWins"
+      ? b.wins - a.wins || b.winRate - a.winRate
+      : b.winRate - a.winRate || b.gamesPlayed - a.gamesPlayed
+  );
   return (
     <div className="flex flex-col gap-2">
-      {decks.map((d, i) => (
+      {sorted.map((d, i) => (
         <div
           key={d.id}
           className="flex items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3"
@@ -277,7 +305,7 @@ function DeckLeaderboard({
             </div>
           </div>
           <span className="shrink-0 text-lg font-black tabular-nums text-emerald-400">
-            {pct(d.winRate)}
+            {metric === "totalWins" ? d.wins : pct(d.winRate)}
           </span>
         </div>
       ))}
@@ -285,11 +313,11 @@ function DeckLeaderboard({
   );
 }
 
-function MatchupTable({
+function DeckMatchupTable({
   matchups,
   podSizeFilter,
 }: {
-  matchups: ReportingData["matchups"];
+  matchups: ReportingData["deckMatchups"];
   podSizeFilter: number | null;
 }) {
   if (matchups.length === 0) {
@@ -335,6 +363,59 @@ function MatchupTable({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function PlayerMatchupTable({
+  matchups,
+  podSizeFilter,
+}: {
+  matchups: ReportingData["playerMatchups"];
+  podSizeFilter: number | null;
+}) {
+  if (matchups.length === 0) {
+    return (
+      <EmptyState
+        text={
+          podSizeFilter
+            ? `No repeat pods of ${podSizeFilter} players yet.`
+            : "No games logged yet — matchups need at least two players in a finished game."
+        }
+      />
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {matchups.map((group) => (
+        <div
+          key={group.key}
+          className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3"
+        >
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            {group.gamesPlayed} game{group.gamesPlayed === 1 ? "" : "s"}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {[...group.players]
+              .sort((a, b) => b.wins - a.wins)
+              .map((p) => {
+                const losses = group.gamesPlayed - p.wins;
+                const rate = group.gamesPlayed ? p.wins / group.gamesPlayed : 0;
+                return (
+                  <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate font-semibold text-white">
+                      {displayName(p.name, p.screenName)}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-neutral-400">
+                      {p.wins}W – {losses}L
+                      <span className="ml-1 font-bold text-emerald-400">{pct(rate)}</span>
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -211,10 +211,17 @@ export type DeckMatchup = {
   bWins: number;
 };
 
+export type PlayerGroupMatchup = {
+  key: string;
+  players: { id: string; name: string; screenName: string | null; wins: number }[];
+  gamesPlayed: number;
+};
+
 export type ReportingData = {
   players: PlayerStats[];
   decks: DeckStats[];
-  matchups: DeckMatchup[];
+  deckMatchups: DeckMatchup[];
+  playerMatchups: PlayerGroupMatchup[];
 };
 
 export type DateRange = { from: string; to: string };
@@ -312,11 +319,44 @@ export async function getReportingData(
     }
   }
 
-  const matchups = Array.from(matchupMap.values()).sort(
+  const deckMatchups = Array.from(matchupMap.values()).sort(
     (a, b) => b.aWins + b.bWins - (a.aWins + a.bWins)
   );
 
-  return { players: playerStats, decks: deckStats, matchups };
+  const groupMap = new Map<string, PlayerGroupMatchup>();
+  for (const game of allGames) {
+    const gp = allParticipants.filter((p) => p.gameId === game.id);
+    const distinctPlayerIds = Array.from(
+      new Set(gp.map((p) => p.playerId))
+    ).sort();
+    if (distinctPlayerIds.length < 2) continue;
+    const key = distinctPlayerIds.join("|");
+    let group = groupMap.get(key);
+    if (!group) {
+      group = {
+        key,
+        players: distinctPlayerIds.map((id) => ({
+          id,
+          name: playersById.get(id)?.name ?? "Unknown",
+          screenName: playersById.get(id)?.screenName ?? null,
+          wins: 0,
+        })),
+        gamesPlayed: 0,
+      };
+      groupMap.set(key, group);
+    }
+    group.gamesPlayed += 1;
+    if (game.winnerPlayerId) {
+      const winner = group.players.find((p) => p.id === game.winnerPlayerId);
+      if (winner) winner.wins += 1;
+    }
+  }
+
+  const playerMatchups = Array.from(groupMap.values()).sort(
+    (a, b) => b.gamesPlayed - a.gamesPlayed
+  );
+
+  return { players: playerStats, decks: deckStats, deckMatchups, playerMatchups };
 }
 
 export type PlayerGameHistoryEntry = {
