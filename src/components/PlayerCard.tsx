@@ -109,7 +109,7 @@ export default function PlayerCard({
       style={
         player.artCropUrl
           ? {
-              backgroundImage: `linear-gradient(to bottom, rgba(10,10,10,0.2), rgba(10,10,10,0.2) 55%, rgba(10,10,10,0.5)), url("${player.artCropUrl}")`,
+              backgroundImage: `url("${player.artCropUrl}")`,
             }
           : undefined
       }
