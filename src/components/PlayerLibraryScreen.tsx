@@ -33,9 +33,19 @@ export default function PlayerLibraryScreen({
   async function addPlayer() {
     const name = newName.trim();
     if (!name) return;
-    setNewName("");
-    const created = await createPlayer(name);
-    onChangePlayers((prev) => [...prev, created]);
+    const nameLower = name.toLowerCase();
+    if (players.some((p) => p.name.toLowerCase() === nameLower)) {
+      setError(`A player named "${name}" already exists.`);
+      return;
+    }
+    try {
+      const created = await createPlayer(name);
+      setNewName("");
+      setError(null);
+      onChangePlayers((prev) => [...prev, created]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't add player.");
+    }
   }
 
   async function removePlayer(id: string) {
@@ -47,11 +57,9 @@ export default function PlayerLibraryScreen({
     }
   }
 
-  function handleRename(id: string, name: string, screenName: string | null) {
+  async function handleRename(id: string, name: string, screenName: string | null): Promise<void> {
+    await renamePlayer(id, name, screenName);
     onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name, screenName } : p)));
-    startTransition(() => {
-      renamePlayer(id, name, screenName);
-    });
   }
 
   async function addDeck(playerId: string, name: string, commander: string, colors: string) {

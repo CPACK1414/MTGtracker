@@ -15,6 +15,26 @@ function friendlyDbError(e: unknown, context: string): never {
   throw e;
 }
 
+async function ensureUniqueNames(
+  name: string,
+  screenName: string | null,
+  excludePlayerId?: string
+): Promise<void> {
+  const nameLower = name.trim().toLowerCase();
+  const screenLower = screenName?.trim().toLowerCase();
+
+  const allPlayers = await db.select().from(players);
+  for (const p of allPlayers) {
+    if (p.id === excludePlayerId) continue;
+    if (p.name.trim().toLowerCase() === nameLower) {
+      throw new Error(`A player named "${name.trim()}" already exists.`);
+    }
+    if (screenLower && p.screenName && p.screenName.trim().toLowerCase() === screenLower) {
+      throw new Error(`A player with the screen name "${screenName!.trim()}" already exists.`);
+    }
+  }
+}
+
 export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
   const [allPlayers, allDecks] = await Promise.all([
     db.select().from(players).orderBy(players.createdAt),
@@ -32,6 +52,7 @@ export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
 }
 
 export async function createPlayer(name: string): Promise<PlayerProfile> {
+  await ensureUniqueNames(name, null);
   const [player] = await db.insert(players).values({ name }).returning();
   return { ...player, decks: [] };
 }
@@ -41,6 +62,7 @@ export async function renamePlayer(
   name: string,
   screenName: string | null
 ): Promise<void> {
+  await ensureUniqueNames(name, screenName, id);
   await db.update(players).set({ name, screenName }).where(eq(players.id, id));
 }
 

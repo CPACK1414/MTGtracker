@@ -14,7 +14,7 @@ export default function PlayerRow({
   onRemoveDeck,
 }: {
   player: PlayerProfile;
-  onRename: (name: string, screenName: string | null) => void;
+  onRename: (name: string, screenName: string | null) => Promise<void>;
   onDelete: () => void;
   onAddDeck: (name: string, commander: string, colors: string) => void;
   onEditDeck: (deckId: string, name: string, commander: string, colors: string) => void;
@@ -24,18 +24,29 @@ export default function PlayerRow({
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState(player.name);
   const [draftScreenName, setDraftScreenName] = useState(player.screenName ?? "");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [addingDeck, setAddingDeck] = useState(false);
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
 
   function startRenaming() {
     setDraftName(player.name);
     setDraftScreenName(player.screenName ?? "");
+    setRenameError(null);
     setRenaming(true);
   }
 
-  function saveRenaming() {
-    onRename(draftName.trim() || player.name, draftScreenName.trim() || null);
-    setRenaming(false);
+  async function saveRenaming() {
+    setSaving(true);
+    setRenameError(null);
+    try {
+      await onRename(draftName.trim() || player.name, draftScreenName.trim() || null);
+      setRenaming(false);
+    } catch (e) {
+      setRenameError(e instanceof Error ? e.message : "Couldn't save changes.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -55,6 +66,7 @@ export default function PlayerRow({
             placeholder="Screen Name (shown in game)"
             className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
           />
+          {renameError && <p className="text-xs text-red-400">{renameError}</p>}
           <div className="flex gap-2">
             <button
               onClick={() => setRenaming(false)}
@@ -63,10 +75,11 @@ export default function PlayerRow({
               Cancel
             </button>
             <button
+              disabled={saving}
               onClick={saveRenaming}
-              className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95"
+              className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-50"
             >
-              Save
+              {saving ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
