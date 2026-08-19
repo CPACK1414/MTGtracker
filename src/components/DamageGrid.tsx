@@ -14,7 +14,7 @@ export default function DamageGrid({
   radiation: number;
   onOpen: () => void;
 }) {
-  const totalItems = opponents.length + 2;
+  const totalItems = opponents.length + (poison > 0 ? 1 : 0) + (radiation > 0 ? 1 : 0);
   const isLastOdd = totalItems % 2 === 1;
 
   return (
@@ -27,25 +27,33 @@ export default function DamageGrid({
           {o.name.slice(0, 3)} <span className="font-bold text-white">{o.amount}</span>
         </span>
       ))}
-      <span className="flex items-center gap-1 text-[10px] font-semibold tabular-nums text-neutral-300">
-        <Image
-          src="/poison-counter.png"
-          alt=""
-          width={10}
-          height={10}
-          className="h-2.5 w-2.5 object-contain"
-          style={{ filter: "invert(1)" }}
-        />
-        <span className="font-bold text-white">{poison}</span>
-      </span>
-      <span
-        className={`flex items-center gap-1 text-[10px] font-semibold tabular-nums text-neutral-300 ${
-          isLastOdd ? "col-span-2 justify-self-center" : ""
-        }`}
-      >
-        <span className="text-xs leading-none">☢</span>
-        <span className="font-bold text-white">{radiation}</span>
-      </span>
+      {poison > 0 && (
+        <span
+          className={`flex items-center gap-1 text-[10px] font-semibold tabular-nums text-neutral-300 ${
+            isLastOdd && radiation === 0 ? "col-span-2 justify-self-center" : ""
+          }`}
+        >
+          <Image
+            src="/poison-counter.png"
+            alt=""
+            width={10}
+            height={10}
+            className="h-2.5 w-2.5 object-contain"
+            style={{ filter: "invert(1)" }}
+          />
+          <span className="font-bold text-white">{poison}</span>
+        </span>
+      )}
+      {radiation > 0 && (
+        <span
+          className={`flex items-center gap-1 text-[10px] font-semibold tabular-nums text-neutral-300 ${
+            isLastOdd ? "col-span-2 justify-self-center" : ""
+          }`}
+        >
+          <span className="text-xs leading-none">☢</span>
+          <span className="font-bold text-white">{radiation}</span>
+        </span>
+      )}
     </button>
   );
 }

@@ -114,22 +114,32 @@ export default function PlayerCard({
             disabled={player.eliminated}
             onChange={(delta) => onChangeCommanderDamage(singleOpponent.id, delta)}
           />
-          <button
-            onClick={onOpenCounters}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-800 px-2 py-1.5 active:scale-95"
-          >
-            <Image
-              src="/poison-counter.png"
-              alt=""
-              width={10}
-              height={10}
-              className="h-2.5 w-2.5 object-contain"
-              style={{ filter: "invert(1)" }}
-            />
-            <span className="text-xs font-bold tabular-nums text-white">{poison}</span>
-            <span className="text-xs leading-none">☢</span>
-            <span className="text-xs font-bold tabular-nums text-white">{radiation}</span>
-          </button>
+          {(poison > 0 || radiation > 0) && (
+            <button
+              onClick={onOpenCounters}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-800 px-2 py-1.5 active:scale-95"
+            >
+              {poison > 0 && (
+                <span className="flex items-center gap-1">
+                  <Image
+                    src="/poison-counter.png"
+                    alt=""
+                    width={10}
+                    height={10}
+                    className="h-2.5 w-2.5 object-contain"
+                    style={{ filter: "invert(1)" }}
+                  />
+                  <span className="text-xs font-bold tabular-nums text-white">{poison}</span>
+                </span>
+              )}
+              {radiation > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="text-xs leading-none">☢</span>
+                  <span className="text-xs font-bold tabular-nums text-white">{radiation}</span>
+                </span>
+              )}
+            </button>
+          )}
         </div>
       )}
 
@@ -152,6 +162,13 @@ export default function PlayerCard({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={onOpenCounters}
+            aria-label="Open counters"
+            className="rounded-full bg-neutral-800 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
+          >
+            ⊕
+          </button>
           <button
             onClick={onRotate}
             aria-label="Rotate this player's card"
