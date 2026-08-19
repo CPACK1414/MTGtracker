@@ -97,6 +97,7 @@ export type SaveGamePayload = {
     seatOrder: number;
     finalLife: number;
     placement: number;
+    eliminationReason: "dead" | "scoop" | null;
   }[];
   damage: { fromPlayerId: string; toPlayerId: string; amount: number }[];
 };
@@ -123,6 +124,7 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
           startingLife: STARTING_LIFE,
           finalLife: p.finalLife,
           placement: p.placement,
+          eliminationReason: p.eliminationReason,
         }))
       );
     }

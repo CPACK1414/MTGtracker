@@ -7,6 +7,7 @@ export type Player = {
   commander?: string;
   life: number;
   eliminated: boolean;
+  eliminationReason?: "dead" | "scoop";
 };
 
 export type PodSelection = {

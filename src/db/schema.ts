@@ -42,6 +42,7 @@ export const gameParticipants = pgTable("game_participants", {
   finalLife: integer("final_life"),
   placement: integer("placement"),
   eliminatedById: uuid("eliminated_by_id").references(() => players.id),
+  eliminationReason: text("elimination_reason"),
 });
 
 export const commanderDamage = pgTable("commander_damage", {

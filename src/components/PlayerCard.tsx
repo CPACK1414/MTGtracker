@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Player } from "@/lib/types";
 import CounterChip from "@/components/CounterChip";
 import CounterBadge from "@/components/CounterBadge";
@@ -20,7 +21,9 @@ export default function PlayerCard({
   poison,
   radiation,
   onChangeLife,
-  onToggleEliminate,
+  onMarkDead,
+  onScoop,
+  onRevive,
   onRotate,
   onChangeCommanderDamage,
   onOpenCounters,
@@ -33,11 +36,15 @@ export default function PlayerCard({
   poison: number;
   radiation: number;
   onChangeLife: (delta: number) => void;
-  onToggleEliminate: () => void;
+  onMarkDead: () => void;
+  onScoop: () => void;
+  onRevive: () => void;
   onRotate: () => void;
   onChangeCommanderDamage: (fromOpponentId: string, delta: number) => void;
   onOpenCounters: () => void;
 }) {
+  const [confirmingElimination, setConfirmingElimination] = useState(false);
+
   const lifeColor =
     player.life <= 0
       ? "text-red-500"
@@ -90,18 +97,44 @@ export default function PlayerCard({
           >
             ⟳
           </button>
-          <button
-            onClick={onToggleEliminate}
-            className={`rounded-full px-2 py-1 text-xs font-bold ${
-              player.eliminated
-                ? "bg-neutral-700 text-neutral-300"
-                : isLethal
-                ? "bg-red-600 text-white animate-pulse"
-                : "bg-neutral-800 text-neutral-500"
-            }`}
-          >
-            {player.eliminated ? "Revive" : "Out"}
-          </button>
+          {player.eliminated ? (
+            <button
+              onClick={onRevive}
+              className="rounded-full bg-neutral-700 px-2 py-1 text-xs font-bold text-neutral-300 active:scale-95"
+            >
+              Revive
+            </button>
+          ) : confirmingElimination ? (
+            <div className="flex gap-1">
+              <button
+                onClick={() => {
+                  setConfirmingElimination(false);
+                  onMarkDead();
+                }}
+                className="rounded-full bg-red-600 px-2 py-1 text-[10px] font-bold text-white active:scale-95"
+              >
+                Dead
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmingElimination(false);
+                  onScoop();
+                }}
+                className="rounded-full bg-neutral-700 px-2 py-1 text-[10px] font-bold text-neutral-300 active:scale-95"
+              >
+                Scoop
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingElimination(true)}
+              className={`rounded-full px-2 py-1 text-xs font-bold ${
+                isLethal ? "bg-red-600 text-white animate-pulse" : "bg-neutral-800 text-neutral-500"
+              }`}
+            >
+              Dead
+            </button>
+          )}
         </div>
       </div>
 

@@ -106,21 +106,24 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     );
   }
 
-  function toggleEliminate(id: string) {
-    setPlayers((prev) => {
-      if (!prev) return prev;
-      const target = prev.find((p) => p.id === id);
-      if (!target) return prev;
-      const nowEliminated = !target.eliminated;
-      setEliminationOrder((order) =>
-        nowEliminated
-          ? order.includes(id)
-            ? order
-            : [...order, id]
-          : order.filter((x) => x !== id)
-      );
-      return prev.map((p) => (p.id === id ? { ...p, eliminated: nowEliminated } : p));
-    });
+  function eliminatePlayer(id: string, reason: "dead" | "scoop") {
+    setPlayers((prev) =>
+      prev
+        ? prev.map((p) => (p.id === id ? { ...p, eliminated: true, eliminationReason: reason } : p))
+        : prev
+    );
+    setEliminationOrder((order) => (order.includes(id) ? order : [...order, id]));
+  }
+
+  function revivePlayer(id: string) {
+    setPlayers((prev) =>
+      prev
+        ? prev.map((p) =>
+            p.id === id ? { ...p, eliminated: false, eliminationReason: undefined } : p
+          )
+        : prev
+    );
+    setEliminationOrder((order) => order.filter((x) => x !== id));
   }
 
   function changeDamage(fromId: string, toId: string, delta: number) {
@@ -197,6 +200,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           seatOrder: i + 1,
           finalLife: p.life,
           placement: placements[p.id],
+          eliminationReason: p.eliminationReason ?? null,
         })),
         damage: damageRows,
       });
@@ -302,7 +306,9 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
                 poison={poison[p.id] ?? 0}
                 radiation={radiation[p.id] ?? 0}
                 onChangeLife={(delta) => changeLife(p.id, delta)}
-                onToggleEliminate={() => toggleEliminate(p.id)}
+                onMarkDead={() => eliminatePlayer(p.id, "dead")}
+                onScoop={() => eliminatePlayer(p.id, "scoop")}
+                onRevive={() => revivePlayer(p.id)}
                 onRotate={() => rotatePlayer(p.id)}
                 onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
                 onOpenCounters={() => setCounterModalPlayerId(p.id)}
