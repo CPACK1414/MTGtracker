@@ -237,9 +237,9 @@ export default function PlayerCard({
           onPointerUp={() => minusHold.release(() => onChangeLife(-1))}
           onPointerLeave={minusHold.cancel}
           onPointerCancel={minusHold.cancel}
-          className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-red-400 active:scale-95 disabled:opacity-30"
+          className="flex items-center justify-center rounded-xl bg-neutral-800/35 py-2 text-4xl leading-none font-bold text-red-500 active:scale-95 disabled:opacity-30"
         >
-          −
+          <span className="inline-block -translate-y-[3px]">−</span>
         </button>
         <button
           disabled={player.eliminated}
@@ -247,9 +247,9 @@ export default function PlayerCard({
           onPointerUp={() => plusHold.release(() => onChangeLife(1))}
           onPointerLeave={plusHold.cancel}
           onPointerCancel={plusHold.cancel}
-          className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
+          className="flex items-center justify-center rounded-xl bg-neutral-800/35 py-2 text-4xl leading-none font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
         >
-          +
+          <span className="inline-block -translate-y-[3px]">+</span>
         </button>
       </div>
 
