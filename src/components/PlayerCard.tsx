@@ -18,6 +18,7 @@ const HOLD_INTERVAL_MS = 150;
 function useHoldRepeat() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const repeatingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -26,21 +27,34 @@ function useHoldRepeat() {
     };
   }, []);
 
-  function stop() {
+  function clearTimers() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
     timeoutRef.current = null;
     intervalRef.current = null;
   }
 
-  function start(onTap: () => void, onRepeat: () => void) {
-    onTap();
+  function start(onRepeat: () => void) {
+    repeatingRef.current = false;
     timeoutRef.current = setTimeout(() => {
+      repeatingRef.current = true;
       intervalRef.current = setInterval(onRepeat, HOLD_INTERVAL_MS);
     }, HOLD_DELAY_MS);
   }
 
-  return { start, stop };
+  function release(onTap: () => void) {
+    const wasRepeating = repeatingRef.current;
+    clearTimers();
+    repeatingRef.current = false;
+    if (!wasRepeating) onTap();
+  }
+
+  function cancel() {
+    clearTimers();
+    repeatingRef.current = false;
+  }
+
+  return { start, release, cancel };
 }
 
 export default function PlayerCard({
@@ -222,20 +236,20 @@ export default function PlayerCard({
       <div className="grid grid-cols-2 gap-2">
         <button
           disabled={player.eliminated}
-          onPointerDown={() => minusHold.start(() => onChangeLife(-1), () => onChangeLife(-10))}
-          onPointerUp={minusHold.stop}
-          onPointerLeave={minusHold.stop}
-          onPointerCancel={minusHold.stop}
+          onPointerDown={() => minusHold.start(() => onChangeLife(-10))}
+          onPointerUp={() => minusHold.release(() => onChangeLife(-1))}
+          onPointerLeave={minusHold.cancel}
+          onPointerCancel={minusHold.cancel}
           className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-red-400 active:scale-95 disabled:opacity-30"
         >
           −
         </button>
         <button
           disabled={player.eliminated}
-          onPointerDown={() => plusHold.start(() => onChangeLife(1), () => onChangeLife(10))}
-          onPointerUp={plusHold.stop}
-          onPointerLeave={plusHold.stop}
-          onPointerCancel={plusHold.stop}
+          onPointerDown={() => plusHold.start(() => onChangeLife(10))}
+          onPointerUp={() => plusHold.release(() => onChangeLife(1))}
+          onPointerLeave={plusHold.cancel}
+          onPointerCancel={plusHold.cancel}
           className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
         >
           +
