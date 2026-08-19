@@ -54,7 +54,7 @@ export default function PlayerCard({
 
   return (
     <div
-      className={`flex h-full w-full flex-col rounded-2xl border bg-cover bg-center p-3 transition-opacity ${
+      className={`relative flex h-full w-full flex-col rounded-2xl border bg-cover bg-center p-2 transition-opacity ${
         player.eliminated
           ? "border-neutral-800 bg-neutral-900/50 opacity-50"
           : "border-neutral-800 bg-neutral-900"
@@ -67,6 +67,12 @@ export default function PlayerCard({
           : undefined
       }
     >
+      <div
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center text-center text-6xl font-black tabular-nums ${lifeColor}`}
+      >
+        {player.life}
+      </div>
+
       {singleOpponent && (
         <div className="mb-1 flex justify-center">
           <CounterChip
@@ -86,7 +92,7 @@ export default function PlayerCard({
 
       <div className="mb-1 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-neutral-300">
+          <p className="truncate text-base font-semibold text-neutral-300">
             {player.name}
             {isFirst && <span className="ml-1">🎲</span>}
           </p>
@@ -145,13 +151,9 @@ export default function PlayerCard({
         </div>
       </div>
 
-      <div
-        className={`flex flex-1 items-center justify-center text-center text-6xl font-black tabular-nums ${lifeColor}`}
-      >
-        {player.life}
-      </div>
+      <div className="flex-1" />
 
-      <div className="mb-2 flex justify-center gap-2">
+      <div className="mb-1 flex justify-center gap-2">
         <CounterBadge label="Poison" icon="/poison-counter.png" value={poison} onClick={onOpenCounters} />
         <CounterBadge label="Radiation" emoji="☢" value={radiation} onClick={onOpenCounters} />
       </div>
@@ -160,28 +162,28 @@ export default function PlayerCard({
         <button
           disabled={player.eliminated}
           onClick={() => onChangeLife(-5)}
-          className="rounded-xl bg-neutral-800/60 py-3 text-sm font-semibold text-red-300 active:scale-95 disabled:opacity-30"
+          className="rounded-xl bg-neutral-800/60 py-2 text-sm font-semibold text-red-300 active:scale-95 disabled:opacity-30"
         >
           −5
         </button>
         <button
           disabled={player.eliminated}
           onClick={() => onChangeLife(-1)}
-          className="rounded-xl bg-neutral-800 py-3 text-2xl font-bold text-red-400 active:scale-95 disabled:opacity-30"
+          className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-red-400 active:scale-95 disabled:opacity-30"
         >
           −
         </button>
         <button
           disabled={player.eliminated}
           onClick={() => onChangeLife(1)}
-          className="rounded-xl bg-neutral-800 py-3 text-2xl font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
+          className="rounded-xl bg-neutral-800 py-2 text-2xl font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
         >
           +
         </button>
         <button
           disabled={player.eliminated}
           onClick={() => onChangeLife(5)}
-          className="rounded-xl bg-neutral-800/60 py-3 text-sm font-semibold text-emerald-300 active:scale-95 disabled:opacity-30"
+          className="rounded-xl bg-neutral-800/60 py-2 text-sm font-semibold text-emerald-300 active:scale-95 disabled:opacity-30"
         >
           +5
         </button>

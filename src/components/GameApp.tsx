@@ -275,7 +275,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       </header>
 
       <div
-        className="flex-1 gap-3 p-3"
+        className="flex-1 gap-2 p-2"
         style={{
           display: "grid",
           gridTemplateColumns: layoutTemplate.columns,

@@ -19,7 +19,7 @@ export default function RotatableCard({
   const innerHeight = swapped ? width : height;
 
   return (
-    <div ref={ref} style={style} className="relative overflow-hidden">
+    <div ref={ref} style={style} className="relative">
       <div
         className="absolute left-1/2 top-1/2"
         style={{
