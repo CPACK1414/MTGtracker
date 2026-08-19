@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Deck } from "@/lib/library";
 import { parseCommanderNames } from "@/lib/decklist";
+import CommanderInput from "@/components/CommanderInput";
 
 const WUBRG_ORDER = ["W", "U", "B", "R", "G"];
 
@@ -63,12 +64,7 @@ export default function DeckForm({
         placeholder="Deck name"
         className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
       />
-      <input
-        value={commander}
-        onChange={(e) => setCommander(e.target.value)}
-        placeholder="Commander (optional)"
-        className="rounded-lg bg-neutral-900 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
-      />
+      <CommanderInput value={commander} onChange={setCommander} onPickColors={setColors} />
       <input
         value={colors}
         onChange={(e) => setColors(e.target.value.toUpperCase())}
@@ -111,8 +107,10 @@ export default function DeckForm({
           Cancel
         </button>
         <button
-          disabled={!name.trim()}
-          onClick={() => name.trim() && onSave(name.trim(), commander.trim(), colors.trim())}
+          disabled={!name.trim() || !commander.trim()}
+          onClick={() =>
+            name.trim() && commander.trim() && onSave(name.trim(), commander.trim(), colors.trim())
+          }
           className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-40"
         >
           Save
