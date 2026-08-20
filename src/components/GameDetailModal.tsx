@@ -66,6 +66,13 @@ export default function GameDetailModal({
               {formatDuration(detail.durationSeconds)}
             </p>
 
+            {detail.firstPlayerName && (
+              <p className="text-xs text-neutral-500">
+                🎲 {detail.firstPlayerName}
+                {detail.firstPlayerScreenName && ` (${detail.firstPlayerScreenName})`} went first
+              </p>
+            )}
+
             <button
               onClick={() => setShowPlayByPlay(true)}
               className="rounded-xl bg-neutral-800 py-2 text-sm font-semibold text-neutral-300 active:scale-95"

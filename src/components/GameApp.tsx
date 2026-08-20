@@ -157,6 +157,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     });
     setRotations(initialRotations);
     setGameStartedAt(Date.now());
+    setShowRandomizer(true);
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
     batchTimeoutRef.current = null;
@@ -179,6 +180,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setPoison({});
     setRadiation({});
     setFirstPlayerId(null);
+    setShowRandomizer(false);
     setEliminationOrder([]);
     setShowEndGame(false);
     setSaveError(null);
@@ -306,6 +308,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         durationSeconds,
         winnerPlayerId: winner.profileId,
         winnerDeckId: winner.deckId,
+        firstPlayerId: firstPlayerId,
         participants: players.map((p, i) => ({
           playerId: p.profileId,
           deckId: p.deckId,

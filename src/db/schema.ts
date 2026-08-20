@@ -27,6 +27,7 @@ export const games = pgTable("games", {
   podSize: integer("pod_size").notNull(),
   winnerPlayerId: uuid("winner_player_id").references(() => players.id),
   winnerDeckId: uuid("winner_deck_id").references(() => decks.id),
+  firstPlayerId: uuid("first_player_id").references(() => players.id),
   notes: text("notes"),
 });
 

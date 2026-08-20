@@ -152,6 +152,7 @@ export type SaveGamePayload = {
   durationSeconds: number;
   winnerPlayerId: string | null;
   winnerDeckId: string | null;
+  firstPlayerId: string | null;
   participants: {
     playerId: string;
     deckId: string | null;
@@ -173,6 +174,7 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
         durationSeconds: payload.durationSeconds,
         winnerPlayerId: payload.winnerPlayerId,
         winnerDeckId: payload.winnerDeckId,
+        firstPlayerId: payload.firstPlayerId,
       })
       .returning();
 
@@ -463,6 +465,8 @@ export type GameDetail = {
   playedAt: string;
   podSize: number;
   durationSeconds: number | null;
+  firstPlayerName: string | null;
+  firstPlayerScreenName: string | null;
   participants: GameDetailParticipant[];
 };
 
@@ -503,11 +507,15 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
     })
     .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99));
 
+  const firstPlayer = game.firstPlayerId ? playersById.get(game.firstPlayerId) : undefined;
+
   return {
     gameId: game.id,
     playedAt: game.playedAt.toISOString(),
     podSize: game.podSize,
     durationSeconds: game.durationSeconds,
+    firstPlayerName: firstPlayer?.name ?? null,
+    firstPlayerScreenName: firstPlayer?.screenName ?? null,
     participants,
   };
 }
