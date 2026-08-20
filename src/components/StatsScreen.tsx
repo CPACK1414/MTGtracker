@@ -6,7 +6,7 @@ import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
 import PlayerHistoryModal from "@/components/PlayerHistoryModal";
 
 type Scope = "player" | "deck";
-type Mode = "totalWins" | "winRate" | "matchups";
+type Mode = "totalWins" | "winRate" | "matchups" | "random";
 type TimeRangeKey = "all" | "7d" | "30d" | "90d" | "1y" | "custom";
 
 const SCOPES: { key: Scope; label: string }[] = [
@@ -18,6 +18,7 @@ const MODES: { key: Mode; label: string }[] = [
   { key: "totalWins", label: "Total Wins" },
   { key: "winRate", label: "Win Rate" },
   { key: "matchups", label: "Matchups" },
+  { key: "random", label: "Fun Stats" },
 ];
 
 const POD_SIZES = Array.from(
@@ -36,6 +37,15 @@ const TIME_RANGES: { key: TimeRangeKey; label: string; days?: number }[] = [
 
 function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
+}
+
+function formatDuration(seconds: number): string {
+  const totalSeconds = Math.round(seconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
 }
 
 function displayName(name: string, screenName?: string | null) {
@@ -141,7 +151,7 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      <div className="flex gap-1 overflow-x-auto px-4 pt-3">
+      <div className={`flex gap-1 overflow-x-auto px-4 pt-3 ${mode === "random" ? "hidden" : ""}`}>
         {SCOPES.map((s) => (
           <button
             key={s.key}
@@ -172,6 +182,8 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
       <div className="flex-1 overflow-y-auto px-4 pb-6">
         {!data ? (
           <p className="mt-10 text-center text-sm text-neutral-500">Loading…</p>
+        ) : mode === "random" ? (
+          <FunStatsView stats={data.funStats} />
         ) : mode === "matchups" ? (
           scope === "player" ? (
             <PlayerMatchupTable matchups={data.playerMatchups} podSizeFilter={podSizeFilter} />
@@ -416,6 +428,149 @@ function PlayerMatchupTable({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function FunStatCard({
+  emoji,
+  label,
+  entries,
+}: {
+  emoji: string;
+  label: string;
+  entries: { name: string; valueText: string }[];
+}) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {emoji} {label}
+      </p>
+      {entries.length === 0 ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {entries.map((e, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <span className="truncate font-semibold text-white">{e.name}</span>
+              <span className="shrink-0 text-lg font-black tabular-nums text-emerald-400">
+                {e.valueText}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function rankLabel(rank: number): string {
+  if (rank === 1) return "🥇 1st";
+  if (rank === 2) return "🥈 2nd";
+  if (rank === 3) return "🥉 3rd";
+  return `${rank}th`;
+}
+
+function RankedFunStatCard({
+  emoji,
+  label,
+  ranks,
+  unitSingular,
+  unitPlural,
+}: {
+  emoji: string;
+  label: string;
+  ranks: { rank: number; count: number; names: string[] }[];
+  unitSingular: string;
+  unitPlural: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {emoji} {label}
+      </p>
+      {ranks.length === 0 ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {ranks.map((r) => (
+            <div key={r.rank}>
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                {rankLabel(r.rank)}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {r.names.map((name, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-semibold text-white">{name}</span>
+                    <span className="shrink-0 font-black tabular-nums text-emerald-400">
+                      {r.count} {r.count === 1 ? unitSingular : unitPlural}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <RankedFunStatCard
+        emoji="💀"
+        label="Loses the most"
+        ranks={stats.mostLosses.map((r) => ({
+          rank: r.rank,
+          count: r.count,
+          names: r.entries.map((e) => displayName(e.name, e.screenName)),
+        }))}
+        unitSingular="loss"
+        unitPlural="losses"
+      />
+      <RankedFunStatCard
+        emoji="🏳️"
+        label="Scoops the most"
+        ranks={stats.mostScoops.map((r) => ({
+          rank: r.rank,
+          count: r.count,
+          names: r.entries.map((e) => displayName(e.name, e.screenName)),
+        }))}
+        unitSingular="scoop"
+        unitPlural="scoops"
+      />
+      <RankedFunStatCard
+        emoji="🎮"
+        label="Plays the most"
+        ranks={stats.mostGamesPlayed.map((r) => ({
+          rank: r.rank,
+          count: r.count,
+          names: r.entries.map((e) => displayName(e.name, e.screenName)),
+        }))}
+        unitSingular="game"
+        unitPlural="games"
+      />
+      <RankedFunStatCard
+        emoji="⭐"
+        label="Most played commander"
+        ranks={stats.mostPlayedCommander.map((r) => ({
+          rank: r.rank,
+          count: r.count,
+          names: r.commanders,
+        }))}
+        unitSingular="game"
+        unitPlural="games"
+      />
+      <FunStatCard
+        emoji="⏱️"
+        label="Longest average game"
+        entries={stats.longestAvgGame.map((s) => ({
+          name: displayName(s.name, s.screenName),
+          valueText: formatDuration(s.avgDurationSeconds),
+        }))}
+      />
     </div>
   );
 }

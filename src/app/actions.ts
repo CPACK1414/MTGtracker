@@ -264,11 +264,23 @@ export type PlayerGroupMatchup = {
   gamesPlayed: number;
 };
 
+export type FunStatEntry = { name: string; screenName: string | null };
+export type FunStatRank = { rank: number; count: number; entries: FunStatEntry[] };
+export type CommanderStatRank = { rank: number; count: number; commanders: string[] };
+export type FunStats = {
+  mostScoops: FunStatRank[];
+  mostLosses: FunStatRank[];
+  mostPlayedCommander: CommanderStatRank[];
+  mostGamesPlayed: FunStatRank[];
+  longestAvgGame: { name: string; screenName: string | null; avgDurationSeconds: number }[];
+};
+
 export type ReportingData = {
   players: PlayerStats[];
   decks: DeckStats[];
   deckMatchups: DeckGroupMatchup[];
   playerMatchups: PlayerGroupMatchup[];
+  funStats: FunStats;
 };
 
 export type DateRange = { from: string; to: string };
@@ -294,9 +306,7 @@ export async function getReportingData(
     });
   }
   const gameIds = new Set(allGames.map((g) => g.id));
-  const allParticipants = podSize
-    ? allParticipantsRaw.filter((p) => gameIds.has(p.gameId))
-    : allParticipantsRaw;
+  const allParticipants = allParticipantsRaw.filter((p) => gameIds.has(p.gameId));
 
   const decksById = new Map(allDecks.map((d) => [d.id, d]));
   const playersById = new Map(allPlayers.map((p) => [p.id, p]));
@@ -400,7 +410,100 @@ export async function getReportingData(
     (a, b) => b.gamesPlayed - a.gamesPlayed
   );
 
-  return { players: playerStats, decks: deckStats, deckMatchups, playerMatchups };
+  function topRanks(counts: Map<string, number>, topN: number): { rank: number; count: number; ids: string[] }[] {
+    const distinctCounts = Array.from(new Set(counts.values()))
+      .filter((c) => c > 0)
+      .sort((a, b) => b - a)
+      .slice(0, topN);
+    return distinctCounts.map((count, i) => ({
+      rank: i + 1,
+      count,
+      ids: Array.from(counts.entries())
+        .filter(([, c]) => c === count)
+        .map(([id]) => id),
+    }));
+  }
+
+  function topPlayerRanks(counts: Map<string, number>): FunStatRank[] {
+    return topRanks(counts, 3).map(({ rank, count, ids }) => ({
+      rank,
+      count,
+      entries: ids.map((id) => {
+        const p = playersById.get(id);
+        return { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null };
+      }),
+    }));
+  }
+
+  const scoopCounts = new Map<string, number>();
+  const gamesPlayedCounts = new Map<string, number>();
+  for (const gp of allParticipants) {
+    gamesPlayedCounts.set(gp.playerId, (gamesPlayedCounts.get(gp.playerId) ?? 0) + 1);
+    if (gp.eliminationReason === "scoop") {
+      scoopCounts.set(gp.playerId, (scoopCounts.get(gp.playerId) ?? 0) + 1);
+    }
+  }
+
+  const lossCounts = new Map<string, number>();
+  for (const p of playerStats) {
+    const losses = p.gamesPlayed - p.wins;
+    if (losses > 0) lossCounts.set(p.id, losses);
+  }
+
+  const commanderCounts = new Map<string, number>();
+  for (const gp of allParticipants) {
+    const commander = gp.deckId ? decksById.get(gp.deckId)?.commander : null;
+    if (!commander) continue;
+    commanderCounts.set(commander, (commanderCounts.get(commander) ?? 0) + 1);
+  }
+  const mostPlayedCommander: CommanderStatRank[] = topRanks(commanderCounts, 3).map(
+    ({ rank, count, ids }) => ({ rank, count, commanders: ids })
+  );
+
+  const durationByGame = new Map(
+    allGames.filter((g) => g.durationSeconds != null).map((g) => [g.id, g.durationSeconds!])
+  );
+  const durationSumByPlayer = new Map<string, number>();
+  const durationCountByPlayer = new Map<string, number>();
+  for (const gp of allParticipants) {
+    const duration = durationByGame.get(gp.gameId);
+    if (duration == null) continue;
+    durationSumByPlayer.set(gp.playerId, (durationSumByPlayer.get(gp.playerId) ?? 0) + duration);
+    durationCountByPlayer.set(gp.playerId, (durationCountByPlayer.get(gp.playerId) ?? 0) + 1);
+  }
+  const avgByPlayer = new Map<string, number>();
+  for (const [playerId, sum] of durationSumByPlayer) {
+    const count = durationCountByPlayer.get(playerId) ?? 0;
+    if (count === 0) continue;
+    avgByPlayer.set(playerId, sum / count);
+  }
+  let maxAvg = -Infinity;
+  for (const avg of avgByPlayer.values()) {
+    if (avg > maxAvg) maxAvg = avg;
+  }
+  const longestAvgGame: { name: string; screenName: string | null; avgDurationSeconds: number }[] =
+    avgByPlayer.size === 0
+      ? []
+      : Array.from(avgByPlayer.entries())
+          .filter(([, avg]) => Math.abs(avg - maxAvg) < 0.001)
+          .map(([playerId, avg]) => {
+            const p = playersById.get(playerId);
+            return {
+              name: p?.name ?? "Unknown",
+              screenName: p?.screenName ?? null,
+              avgDurationSeconds: avg,
+            };
+          });
+
+  const funStats: FunStats = {
+    mostScoops: topPlayerRanks(scoopCounts),
+    mostLosses: topPlayerRanks(lossCounts),
+    mostPlayedCommander,
+    mostGamesPlayed: topPlayerRanks(gamesPlayedCounts),
+    longestAvgGame,
+  };
+
+  return { players: playerStats, decks: deckStats, deckMatchups, playerMatchups, funStats };
 }
 
 export type PlayerGameHistoryEntry = {
