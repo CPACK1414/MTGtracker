@@ -117,9 +117,23 @@ export default function GameDetailModal({
         )}
       </div>
 
-      {showPlayByPlay && (
-        <PlayByPlayModal gameId={gameId} onClose={() => setShowPlayByPlay(false)} />
-      )}
+      {showPlayByPlay &&
+        (() => {
+          const winner = detail?.participants.find((p) => p.won);
+          const placements: Record<string, number | null> = {};
+          detail?.participants.forEach((p) => {
+            placements[p.playerId] = p.placement;
+          });
+          return (
+            <PlayByPlayModal
+              gameId={gameId}
+              winnerName={winner?.playerName ?? null}
+              winnerScreenName={winner?.playerScreenName ?? null}
+              placements={placements}
+              onClose={() => setShowPlayByPlay(false)}
+            />
+          );
+        })()}
     </div>
   );
 }

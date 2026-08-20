@@ -141,6 +141,7 @@ export type GameEventInput = {
   type: "change" | "eliminated" | "revived";
   playerId: string;
   lifeDelta?: number;
+  commanderDamageDelta?: number;
   poisonDelta?: number;
   radiationDelta?: number;
   eliminationReason?: "dead" | "scoop" | null;
@@ -210,6 +211,7 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
           type: e.type,
           playerId: e.playerId,
           lifeDelta: e.lifeDelta ?? null,
+          commanderDamageDelta: e.commanderDamageDelta ?? null,
           poisonDelta: e.poisonDelta ?? null,
           radiationDelta: e.radiationDelta ?? null,
           eliminationReason: e.eliminationReason ?? null,
@@ -518,6 +520,7 @@ export type GamePlayByPlayEntry = {
   playerName: string;
   playerScreenName: string | null;
   lifeDelta: number | null;
+  commanderDamageDelta: number | null;
   poisonDelta: number | null;
   radiationDelta: number | null;
   eliminationReason: "dead" | "scoop" | null;
@@ -544,6 +547,7 @@ export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayE
     playerName: playersById.get(r.playerId)?.name ?? "Unknown",
     playerScreenName: playersById.get(r.playerId)?.screenName ?? null,
     lifeDelta: r.lifeDelta,
+    commanderDamageDelta: r.commanderDamageDelta,
     poisonDelta: r.poisonDelta,
     radiationDelta: r.radiationDelta,
     eliminationReason: r.eliminationReason as "dead" | "scoop" | null,

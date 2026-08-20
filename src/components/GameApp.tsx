@@ -28,7 +28,7 @@ import { useConfirmUnload } from "@/lib/useConfirmUnload";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
 type CounterMap = Record<string, number>;
-type PendingChange = { life: number; poison: number; radiation: number };
+type PendingChange = { life: number; commanderDamage: number; poison: number; radiation: number };
 
 const CHANGE_BATCH_WINDOW_MS = 10000;
 
@@ -77,12 +77,19 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     pendingWindowStartRef.current = null;
 
     for (const [playerId, change] of Object.entries(pending)) {
-      if (change.life === 0 && change.poison === 0 && change.radiation === 0) continue;
+      if (
+        change.life === 0 &&
+        change.commanderDamage === 0 &&
+        change.poison === 0 &&
+        change.radiation === 0
+      )
+        continue;
       eventsRef.current.push({
         elapsedSeconds,
         type: "change",
         playerId,
         lifeDelta: change.life,
+        commanderDamageDelta: change.commanderDamage,
         poisonDelta: change.poison,
         radiationDelta: change.radiation,
       });
@@ -94,7 +101,12 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     if (pendingWindowStartRef.current === null) {
       pendingWindowStartRef.current = elapsedSecondsNow();
     }
-    const current = pendingChangesRef.current[playerId] ?? { life: 0, poison: 0, radiation: 0 };
+    const current = pendingChangesRef.current[playerId] ?? {
+      life: 0,
+      commanderDamage: 0,
+      poison: 0,
+      radiation: 0,
+    };
     current[kind] += delta;
     pendingChangesRef.current[playerId] = current;
 
@@ -182,13 +194,13 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     eventsRef.current = [];
   }
 
-  function changeLife(id: string, delta: number) {
+  function changeLife(id: string, delta: number, kind: "life" | "commanderDamage" = "life") {
     setPlayers((prev) =>
       prev
         ? prev.map((p) => (p.id === id ? { ...p, life: p.life + delta } : p))
         : prev
     );
-    queueChange(id, "life", delta);
+    queueChange(id, kind, delta);
   }
 
   function eliminatePlayer(id: string, reason: "dead" | "scoop") {
@@ -226,7 +238,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         [fromId]: { ...prev[fromId], [toId]: prevCurrent + actualDelta },
       };
     });
-    changeLife(toId, -actualDelta);
+    changeLife(toId, -actualDelta, "commanderDamage");
   }
 
   function changePoison(id: string, delta: number) {

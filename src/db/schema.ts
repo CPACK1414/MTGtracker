@@ -58,6 +58,7 @@ export const gameEvents = pgTable("game_events", {
     .notNull()
     .references(() => players.id),
   lifeDelta: integer("life_delta"),
+  commanderDamageDelta: integer("commander_damage_delta"),
   poisonDelta: integer("poison_delta"),
   radiationDelta: integer("radiation_delta"),
   eliminationReason: text("elimination_reason"),
