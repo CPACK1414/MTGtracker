@@ -21,7 +21,9 @@ export default function PlayerLibraryScreen({
   onChangePlayers: (updater: (prev: PlayerProfile[]) => PlayerProfile[]) => void;
   onBack: () => void;
 }) {
+  const [addingPlayer, setAddingPlayer] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newScreenName, setNewScreenName] = useState("");
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +47,10 @@ export default function PlayerLibraryScreen({
       return;
     }
     try {
-      const created = await createPlayer(name);
+      const created = await createPlayer(name, newScreenName.trim() || null);
       setNewName("");
+      setNewScreenName("");
+      setAddingPlayer(false);
       setError(null);
       onChangePlayers((prev) => [...prev, created]);
     } catch (e) {
@@ -186,22 +190,51 @@ export default function PlayerLibraryScreen({
           ))}
         </div>
 
-        <div className="mt-3 flex gap-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addPlayer()}
-            placeholder="New player name"
-            className="min-w-0 flex-1 rounded-xl bg-neutral-800 px-4 py-3 text-white outline-none placeholder:text-neutral-500"
-          />
+        {addingPlayer ? (
+          <div className="mt-3 flex flex-col gap-2 rounded-2xl border border-neutral-800 bg-neutral-900 p-3">
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addPlayer()}
+              placeholder="Name"
+              className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+            />
+            <input
+              value={newScreenName}
+              onChange={(e) => setNewScreenName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addPlayer()}
+              placeholder="Screen Name (shown in game)"
+              className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setAddingPlayer(false);
+                  setNewName("");
+                  setNewScreenName("");
+                }}
+                className="flex-1 rounded-lg bg-neutral-700 py-2 text-sm font-semibold text-neutral-300 active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addPlayer}
+                disabled={!newName.trim()}
+                className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-50"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        ) : (
           <button
-            onClick={addPlayer}
-            disabled={!newName.trim()}
-            className="shrink-0 rounded-xl bg-neutral-800 px-4 py-3 font-semibold text-emerald-400 active:scale-95 disabled:opacity-40"
+            onClick={() => setAddingPlayer(true)}
+            className="mt-3 w-full rounded-xl bg-neutral-800 px-4 py-3 font-semibold text-emerald-400 active:scale-95"
           >
-            + Add
+            + Add Player
           </button>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -67,9 +67,15 @@ export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
   }));
 }
 
-export async function createPlayer(name: string): Promise<PlayerProfile> {
-  await ensureUniqueNames(name, null);
-  const [player] = await db.insert(players).values({ name }).returning();
+export async function createPlayer(
+  name: string,
+  screenName?: string | null
+): Promise<PlayerProfile> {
+  await ensureUniqueNames(name, screenName ?? null);
+  const [player] = await db
+    .insert(players)
+    .values({ name, screenName: screenName?.trim() || null })
+    .returning();
   return { ...player, decks: [], gamesPlayed: 0 };
 }
 
