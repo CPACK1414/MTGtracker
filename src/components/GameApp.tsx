@@ -216,6 +216,10 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         : prev
     );
     setEliminationOrder((order) => (order.includes(id) ? order : [...order, id]));
+    // Flush any pending batched damage first so the hit that caused the
+    // death is logged (and ordered) before the elimination itself, instead
+    // of sitting in the batch window until it happens to flush later.
+    flushPendingChanges();
     logInstantEvent(id, "eliminated", reason);
   }
 
@@ -408,9 +412,6 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
             .filter((o) => o.id !== p.id)
             .map((o) => ({ id: o.id, name: o.name, amount: damage[o.id]?.[p.id] ?? 0 }));
 
-          const singleOpponent = players.length === 2 ? opponents[0] : undefined;
-          const groupOpponents = players.length > 2 ? opponents : undefined;
-
           return (
             <RotatableCard
               key={p.id}
@@ -425,15 +426,13 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
                   (maxIncomingDamage[p.id] ?? 0) >= COMMANDER_DAMAGE_LETHAL ||
                   (poison[p.id] ?? 0) >= POISON_LETHAL
                 }
-                singleOpponent={singleOpponent}
-                groupOpponents={groupOpponents}
+                opponents={opponents}
                 poison={poison[p.id] ?? 0}
                 radiation={radiation[p.id] ?? 0}
                 onChangeLife={(delta) => changeLife(p.id, delta)}
                 onOpenElimination={() => setEliminationModalPlayerId(p.id)}
                 onRevive={() => revivePlayer(p.id)}
                 onRotate={() => rotatePlayer(p.id)}
-                onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
                 onOpenCounters={() => setCounterModalPlayerId(p.id)}
               />
             </RotatableCard>

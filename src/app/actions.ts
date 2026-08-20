@@ -532,9 +532,16 @@ export async function getReportingData(
     })
   );
 
+  // "Podium, But Sad" and "Biggest Target" only make sense with 3+ players at
+  // the table (in a 2-player game, 2nd place / eliminated-first is just "the
+  // loser"), so both are scoped to 3+ player games regardless of the pod-size
+  // filter selected above.
+  const gameIds3Plus = new Set(allGames.filter((g) => g.podSize >= 3).map((g) => g.id));
+  const participants3Plus = allParticipants.filter((p) => gameIds3Plus.has(p.gameId));
+
   function placementStat(placement: number): PlacementStat {
     const counts = new Map<string, number>();
-    for (const gp of allParticipants) {
+    for (const gp of participants3Plus) {
       if (gp.placement !== placement) continue;
       counts.set(gp.playerId, (counts.get(gp.playerId) ?? 0) + 1);
     }
@@ -605,7 +612,7 @@ export async function getReportingData(
 
   const eliminationEventsByGame = new Map<string, typeof allEvents>();
   for (const e of allEvents) {
-    if (e.type !== "eliminated") continue;
+    if (e.type !== "eliminated" || !gameIds3Plus.has(e.gameId)) continue;
     const list = eliminationEventsByGame.get(e.gameId) ?? [];
     list.push(e);
     eliminationEventsByGame.set(e.gameId, list);

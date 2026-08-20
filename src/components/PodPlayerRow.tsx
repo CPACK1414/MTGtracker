@@ -31,6 +31,9 @@ export default function PodPlayerRow({
         </span>
         <span className="min-w-0 flex-1 truncate text-base font-semibold text-neutral-100">
           {player.name}
+          {player.screenName && (
+            <span className="ml-1 font-normal text-neutral-500">({player.screenName})</span>
+          )}
         </span>
         <span className="shrink-0 text-xs text-neutral-500">
           {player.decks.length} deck{player.decks.length === 1 ? "" : "s"}

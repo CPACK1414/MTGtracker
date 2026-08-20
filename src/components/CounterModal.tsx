@@ -84,10 +84,14 @@ export default function CounterModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      onClick={onClose}
+    >
       <div
         style={{ transform: `rotate(${rotation}deg)` }}
         className="flex max-h-[85vmin] w-[85vmin] max-w-sm flex-col gap-4 overflow-y-auto rounded-3xl bg-neutral-900 p-5"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-white">{playerName}&apos;s Counters</h2>

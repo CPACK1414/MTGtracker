@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import type { Player } from "@/lib/types";
-import CounterChip from "@/components/CounterChip";
 import DamageGrid from "@/components/DamageGrid";
 import { useHoldRepeat } from "@/lib/useHoldRepeat";
 
@@ -46,29 +44,25 @@ export default function PlayerCard({
   player,
   isLethal,
   isFirst,
-  singleOpponent,
-  groupOpponents,
+  opponents,
   poison,
   radiation,
   onChangeLife,
   onOpenElimination,
   onRevive,
   onRotate,
-  onChangeCommanderDamage,
   onOpenCounters,
 }: {
   player: Player;
   isLethal: boolean;
   isFirst: boolean;
-  singleOpponent?: OpponentDamage;
-  groupOpponents?: OpponentDamage[];
+  opponents: OpponentDamage[];
   poison: number;
   radiation: number;
   onChangeLife: (delta: number) => void;
   onOpenElimination: () => void;
   onRevive: () => void;
   onRotate: () => void;
-  onChangeCommanderDamage: (fromOpponentId: string, delta: number) => void;
   onOpenCounters: () => void;
 }) {
   const minusHold = useHoldRepeat();
@@ -114,54 +108,15 @@ export default function PlayerCard({
         </span>
       </div>
 
-      {(singleOpponent || groupOpponents) && (
+      {opponents.length > 0 && (
         <div className="mb-1 flex justify-center">
           <div className="relative inline-flex items-center">
-            {singleOpponent && (
-              <div className="flex items-center gap-2">
-                <CounterChip
-                  label={singleOpponent.name}
-                  value={singleOpponent.amount}
-                  disabled={player.eliminated}
-                  onChange={(delta) => onChangeCommanderDamage(singleOpponent.id, delta)}
-                />
-                {(poison > 0 || radiation > 0) && (
-                  <button
-                    onClick={onOpenCounters}
-                    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-800 px-2 py-1.5 active:scale-95"
-                  >
-                    {poison > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Image
-                          src="/poison-counter.png"
-                          alt=""
-                          width={10}
-                          height={10}
-                          className="h-2.5 w-2.5 object-contain"
-                          style={{ filter: "invert(1)" }}
-                        />
-                        <span className="text-xs font-bold tabular-nums text-white">{poison}</span>
-                      </span>
-                    )}
-                    {radiation > 0 && (
-                      <span className="flex items-center gap-1">
-                        <span className="text-xs leading-none">☢</span>
-                        <span className="text-xs font-bold tabular-nums text-white">{radiation}</span>
-                      </span>
-                    )}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {!singleOpponent && groupOpponents && (
-              <DamageGrid
-                opponents={groupOpponents}
-                poison={poison}
-                radiation={radiation}
-                onOpen={onOpenCounters}
-              />
-            )}
+            <DamageGrid
+              opponents={opponents}
+              poison={poison}
+              radiation={radiation}
+              onOpen={onOpenCounters}
+            />
 
             <button
               onClick={onOpenCounters}
