@@ -435,17 +435,20 @@ function PlayerMatchupTable({
 function FunStatCard({
   emoji,
   label,
+  explainer,
   entries,
 }: {
   emoji: string;
   label: string;
+  explainer?: string;
   entries: { name: string; valueText: string }[];
 }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <p className={`text-xs font-semibold uppercase tracking-wide text-neutral-500 ${explainer ? "" : "mb-1"}`}>
         {emoji} {label}
       </p>
+      {explainer && <p className="mb-1 text-[11px] text-neutral-600">{explainer}</p>}
       {entries.length === 0 ? (
         <p className="text-sm text-neutral-600">Not enough data yet</p>
       ) : (
@@ -474,6 +477,7 @@ function rankLabel(rank: number): string {
 function RankedFunStatCard({
   emoji,
   label,
+  explainer,
   ranks,
   unitSingular,
   unitPlural,
@@ -481,6 +485,7 @@ function RankedFunStatCard({
 }: {
   emoji: string;
   label: string;
+  explainer?: string;
   ranks: { rank: number; count: number; names: string[] }[];
   unitSingular: string;
   unitPlural: string;
@@ -488,9 +493,10 @@ function RankedFunStatCard({
 }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <p className={`text-xs font-semibold uppercase tracking-wide text-neutral-500 ${explainer ? "" : "mb-2"}`}>
         {emoji} {label}
       </p>
+      {explainer && <p className="mb-2 text-[11px] text-neutral-600">{explainer}</p>}
       {ranks.length === 0 ? (
         <p className="text-sm text-neutral-600">Not enough data yet</p>
       ) : (
@@ -556,7 +562,7 @@ function RunnerUpStatsCard({ runnerUp }: { runnerUp: ReportingData["funStats"]["
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        🥈 Runner Up Stats
+        🥈 Podium, But Sad
       </p>
       <p className="mb-2 text-[11px] text-neutral-600">
         Who finishes just short of the win, most often.
@@ -575,7 +581,7 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
     <div className="flex flex-col gap-2">
       <RankedFunStatCard
         emoji="💀"
-        label="Loses the most"
+        label="Professional Loser"
         ranks={stats.mostLosses.map((r) => ({
           rank: r.rank,
           count: r.count,
@@ -587,7 +593,8 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
       <RunnerUpStatsCard runnerUp={stats.runnerUp} />
       <RankedFunStatCard
         emoji="🏳️"
-        label="Scoops the most"
+        label="First to Fold"
+        explainer="Most scoops"
         ranks={stats.mostScoops.map((r) => ({
           rank: r.rank,
           count: r.count,
@@ -620,7 +627,7 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
       />
       <RankedFunStatCard
         emoji="☠️"
-        label="Elimination Counts"
+        label="Cause of Death"
         ranks={stats.eliminationReasons.map((r) => ({
           rank: r.rank,
           count: r.count,
@@ -632,7 +639,8 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
       />
       <FunStatCard
         emoji="⏱️"
-        label="Longest average game"
+        label="IS IT STILL YOUR TURN?!"
+        explainer="Longest average game"
         entries={stats.longestAvgGame.map((s) => ({
           name: displayName(s.name, s.screenName),
           valueText: formatDuration(s.avgDurationSeconds),
