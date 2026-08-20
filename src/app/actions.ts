@@ -277,6 +277,13 @@ export type FunStats = {
   eliminationReasons: EliminationReasonRank[];
   runnerUp: { secondPlace: PlacementStat; thirdPlace: PlacementStat; fourthPlace: PlacementStat };
   longestAvgGame: { name: string; screenName: string | null; avgDurationSeconds: number }[];
+  firstPlayerWinRate: { wins: number; total: number; winRate: number } | null;
+  biggestHit: {
+    amount: number;
+    hits: { type: "commanderDamage" | "combatDamage"; receiver: FunStatEntry }[];
+  } | null;
+  biggestTarget: FunStatRank[];
+  totalDamage: { commanderDamage: number; combatDamage: number };
 };
 
 export type ReportingData = {
@@ -293,12 +300,15 @@ export async function getReportingData(
   podSize?: number | null,
   dateRange?: DateRange | null
 ): Promise<ReportingData> {
-  const [allPlayers, allDecks, allGamesRaw, allParticipantsRaw] = await Promise.all([
-    db.select().from(players),
-    db.select().from(decks),
-    db.select().from(games),
-    db.select().from(gameParticipants),
-  ]);
+  const [allPlayers, allDecks, allGamesRaw, allParticipantsRaw, allEventsRaw, allCommanderDamageRaw] =
+    await Promise.all([
+      db.select().from(players),
+      db.select().from(decks),
+      db.select().from(games),
+      db.select().from(gameParticipants),
+      db.select().from(gameEvents),
+      db.select().from(commanderDamage),
+    ]);
 
   let allGames = podSize ? allGamesRaw.filter((g) => g.podSize === podSize) : allGamesRaw;
   if (dateRange) {
@@ -311,6 +321,8 @@ export async function getReportingData(
   }
   const gameIds = new Set(allGames.map((g) => g.id));
   const allParticipants = allParticipantsRaw.filter((p) => gameIds.has(p.gameId));
+  const allEvents = allEventsRaw.filter((e) => gameIds.has(e.gameId));
+  const allCommanderDamage = allCommanderDamageRaw.filter((d) => gameIds.has(d.gameId));
 
   const decksById = new Map(allDecks.map((d) => [d.id, d]));
   const playersById = new Map(allPlayers.map((p) => [p.id, p]));
@@ -428,8 +440,8 @@ export async function getReportingData(
     }));
   }
 
-  function topPlayerRanks(counts: Map<string, number>): FunStatRank[] {
-    return topRanks(counts, 3).map(({ rank, count, ids }) => ({
+  function topPlayerRanks(counts: Map<string, number>, topN = 3): FunStatRank[] {
+    return topRanks(counts, topN).map(({ rank, count, ids }) => ({
       rank,
       count,
       entries: ids.map((id) => {
@@ -543,6 +555,80 @@ export async function getReportingData(
     fourthPlace: placementStat(4),
   };
 
+  const gamesWithFirstPlayer = allGames.filter((g) => g.firstPlayerId);
+  const firstPlayerWins = gamesWithFirstPlayer.filter(
+    (g) => g.winnerPlayerId && g.winnerPlayerId === g.firstPlayerId
+  ).length;
+  const firstPlayerWinRate =
+    gamesWithFirstPlayer.length > 0
+      ? {
+          wins: firstPlayerWins,
+          total: gamesWithFirstPlayer.length,
+          winRate: firstPlayerWins / gamesWithFirstPlayer.length,
+        }
+      : null;
+
+  const hitCandidates: { type: "commanderDamage" | "combatDamage"; amount: number; playerId: string }[] =
+    [];
+  for (const e of allEvents) {
+    if (e.type !== "change") continue;
+    if (e.commanderDamageDelta && e.commanderDamageDelta > 0) {
+      hitCandidates.push({
+        type: "commanderDamage",
+        amount: e.commanderDamageDelta,
+        playerId: e.playerId,
+      });
+    }
+    if (e.lifeDelta && e.lifeDelta < 0) {
+      hitCandidates.push({ type: "combatDamage", amount: -e.lifeDelta, playerId: e.playerId });
+    }
+  }
+  let maxHitAmount = 0;
+  for (const c of hitCandidates) {
+    if (c.amount > maxHitAmount) maxHitAmount = c.amount;
+  }
+  const biggestHit =
+    maxHitAmount > 0
+      ? {
+          amount: maxHitAmount,
+          hits: hitCandidates
+            .filter((c) => c.amount === maxHitAmount)
+            .map((c) => {
+              const p = playersById.get(c.playerId);
+              return {
+                type: c.type,
+                receiver: { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null },
+              };
+            }),
+        }
+      : null;
+
+  const eliminationEventsByGame = new Map<string, typeof allEvents>();
+  for (const e of allEvents) {
+    if (e.type !== "eliminated") continue;
+    const list = eliminationEventsByGame.get(e.gameId) ?? [];
+    list.push(e);
+    eliminationEventsByGame.set(e.gameId, list);
+  }
+  const firstEliminatedCounts = new Map<string, number>();
+  for (const events of eliminationEventsByGame.values()) {
+    let earliest: (typeof events)[number] | null = null;
+    for (const e of events) {
+      if (!earliest || e.elapsedSeconds < earliest.elapsedSeconds) earliest = e;
+    }
+    if (earliest) {
+      firstEliminatedCounts.set(earliest.playerId, (firstEliminatedCounts.get(earliest.playerId) ?? 0) + 1);
+    }
+  }
+  const biggestTarget = topPlayerRanks(firstEliminatedCounts, 1);
+
+  const totalCommanderDamage = allCommanderDamage.reduce((sum, d) => sum + d.amount, 0);
+  const totalCombatDamage = allEvents.reduce(
+    (sum, e) => sum + (e.type === "change" && e.lifeDelta && e.lifeDelta < 0 ? -e.lifeDelta : 0),
+    0
+  );
+  const totalDamage = { commanderDamage: totalCommanderDamage, combatDamage: totalCombatDamage };
+
   const funStats: FunStats = {
     mostScoops: topPlayerRanks(scoopCounts),
     mostLosses: topPlayerRanks(lossCounts),
@@ -551,6 +637,10 @@ export async function getReportingData(
     eliminationReasons,
     runnerUp,
     longestAvgGame,
+    firstPlayerWinRate,
+    biggestHit,
+    biggestTarget,
+    totalDamage,
   };
 
   return { players: playerStats, decks: deckStats, deckMatchups, playerMatchups, funStats };

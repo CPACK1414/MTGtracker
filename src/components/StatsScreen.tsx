@@ -576,6 +576,79 @@ function RunnerUpStatsCard({ runnerUp }: { runnerUp: ReportingData["funStats"]["
   );
 }
 
+function FirstPlayerWinRateCard({
+  stat,
+}: {
+  stat: ReportingData["funStats"]["firstPlayerWinRate"];
+}) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        🎲 First Player Win Rate
+      </p>
+      <p className="mb-2 text-[11px] text-neutral-600">Does going first actually help?</p>
+      {!stat ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-neutral-500">
+            {stat.wins} of {stat.total} game{stat.total === 1 ? "" : "s"}
+          </span>
+          <span className="text-2xl font-black tabular-nums text-emerald-400">{pct(stat.winRate)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BiggestHitCard({ biggestHit }: { biggestHit: ReportingData["funStats"]["biggestHit"] }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        💥 Biggest Hit
+      </p>
+      {!biggestHit ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {biggestHit.hits.map((h, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <span className="truncate font-semibold text-white">
+                {biggestHit.amount} {h.type === "commanderDamage" ? "commander" : "combat"} damage to{" "}
+                {displayName(h.receiver.name, h.receiver.screenName)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DamageDealtCard({ totalDamage }: { totalDamage: ReportingData["funStats"]["totalDamage"] }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        ⚔️ Damage Dealt
+      </p>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold text-white">Total Combat Damage</span>
+          <span className="shrink-0 font-black tabular-nums text-emerald-400">
+            {totalDamage.combatDamage}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold text-white">Total Commander Damage</span>
+          <span className="shrink-0 font-black tabular-nums text-emerald-400">
+            {totalDamage.commanderDamage}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
   return (
     <div className="flex flex-col gap-2">
@@ -626,6 +699,20 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
         unitPlural="games"
       />
       <RankedFunStatCard
+        emoji="🎯"
+        label="Biggest Target"
+        explainer="Eliminated first most often"
+        ranks={stats.biggestTarget.map((r) => ({
+          rank: r.rank,
+          count: r.count,
+          names: r.entries.map((e) => displayName(e.name, e.screenName)),
+        }))}
+        unitSingular="game"
+        unitPlural="games"
+        showRankLabel={false}
+      />
+      <FirstPlayerWinRateCard stat={stats.firstPlayerWinRate} />
+      <RankedFunStatCard
         emoji="☠️"
         label="Cause of Death"
         ranks={stats.eliminationReasons.map((r) => ({
@@ -637,6 +724,8 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
         unitPlural="eliminations"
         showRankLabel={false}
       />
+      <BiggestHitCard biggestHit={stats.biggestHit} />
+      <DamageDealtCard totalDamage={stats.totalDamage} />
       <FunStatCard
         emoji="⏱️"
         label="IS IT STILL YOUR TURN?!"
