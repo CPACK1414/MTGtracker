@@ -3,7 +3,7 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { commanderDamage, decks, gameEvents, gameParticipants, games, players } from "@/db/schema";
-import { STARTING_LIFE } from "@/lib/types";
+import { STARTING_LIFE, type EliminationReason } from "@/lib/types";
 import type { Deck, PlayerProfile } from "@/lib/library";
 
 function pgErrorCode(e: unknown): string | undefined {
@@ -144,7 +144,7 @@ export type GameEventInput = {
   commanderDamageDelta?: number;
   poisonDelta?: number;
   radiationDelta?: number;
-  eliminationReason?: "dead" | "scoop" | null;
+  eliminationReason?: EliminationReason | null;
 };
 
 export type SaveGamePayload = {
@@ -159,7 +159,7 @@ export type SaveGamePayload = {
     seatOrder: number;
     finalLife: number;
     placement: number;
-    eliminationReason: "dead" | "scoop" | null;
+    eliminationReason: EliminationReason | null;
   }[];
   damage: { fromPlayerId: string; toPlayerId: string; amount: number }[];
   events: GameEventInput[];
@@ -404,7 +404,7 @@ export type PlayerGameHistoryEntry = {
   podSize: number;
   placement: number | null;
   won: boolean;
-  eliminationReason: "dead" | "scoop" | null;
+  eliminationReason: EliminationReason | null;
   deckName: string | null;
   commander: string | null;
 };
@@ -441,7 +441,7 @@ export async function getPlayerGameHistory(playerId: string): Promise<PlayerGame
       podSize: r.podSize,
       placement: r.placement,
       won: r.winnerPlayerId === playerId,
-      eliminationReason: r.eliminationReason as "dead" | "scoop" | null,
+      eliminationReason: r.eliminationReason as EliminationReason | null,
       deckName: deck?.name ?? null,
       commander: deck?.commander ?? null,
     };
@@ -456,7 +456,7 @@ export type GameDetailParticipant = {
   commander: string | null;
   placement: number | null;
   finalLife: number | null;
-  eliminationReason: "dead" | "scoop" | null;
+  eliminationReason: EliminationReason | null;
   won: boolean;
 };
 
@@ -501,7 +501,7 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
         commander: deck?.commander ?? null,
         placement: p.placement,
         finalLife: p.finalLife,
-        eliminationReason: p.eliminationReason as "dead" | "scoop" | null,
+        eliminationReason: p.eliminationReason as EliminationReason | null,
         won: game.winnerPlayerId === p.playerId,
       };
     })
@@ -531,7 +531,7 @@ export type GamePlayByPlayEntry = {
   commanderDamageDelta: number | null;
   poisonDelta: number | null;
   radiationDelta: number | null;
-  eliminationReason: "dead" | "scoop" | null;
+  eliminationReason: EliminationReason | null;
 };
 
 export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayEntry[]> {
@@ -558,7 +558,7 @@ export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayE
     commanderDamageDelta: r.commanderDamageDelta,
     poisonDelta: r.poisonDelta,
     radiationDelta: r.radiationDelta,
-    eliminationReason: r.eliminationReason as "dead" | "scoop" | null,
+    eliminationReason: r.eliminationReason as EliminationReason | null,
   }));
 }
 

@@ -20,7 +20,7 @@ export default function DamageGrid({
   return (
     <button
       onClick={onOpen}
-      className="mx-auto grid grid-cols-2 gap-x-3 gap-y-0.5 rounded-xl bg-neutral-800 px-2 py-1.5 active:scale-95"
+      className="mx-auto grid grid-cols-2 gap-x-3 gap-y-0.5 rounded-xl bg-neutral-800/80 px-2 py-1.5 active:scale-95"
     >
       {opponents.map((o) => (
         <span key={o.id} className="text-[10px] font-semibold tabular-nums text-neutral-300">

@@ -51,8 +51,7 @@ export default function PlayerCard({
   poison,
   radiation,
   onChangeLife,
-  onMarkDead,
-  onScoop,
+  onOpenElimination,
   onRevive,
   onRotate,
   onChangeCommanderDamage,
@@ -66,14 +65,12 @@ export default function PlayerCard({
   poison: number;
   radiation: number;
   onChangeLife: (delta: number) => void;
-  onMarkDead: () => void;
-  onScoop: () => void;
+  onOpenElimination: () => void;
   onRevive: () => void;
   onRotate: () => void;
   onChangeCommanderDamage: (fromOpponentId: string, delta: number) => void;
   onOpenCounters: () => void;
 }) {
-  const [confirmingElimination, setConfirmingElimination] = useState(false);
   const minusHold = useHoldRepeat();
   const plusHold = useHoldRepeat();
   const lifeDelta = useLifeDelta(player.life);
@@ -117,51 +114,63 @@ export default function PlayerCard({
         </span>
       </div>
 
-      {singleOpponent && (
-        <div className="mb-1 flex items-center justify-center gap-2">
-          <CounterChip
-            label={singleOpponent.name}
-            value={singleOpponent.amount}
-            disabled={player.eliminated}
-            onChange={(delta) => onChangeCommanderDamage(singleOpponent.id, delta)}
-          />
-          {(poison > 0 || radiation > 0) && (
+      {(singleOpponent || groupOpponents) && (
+        <div className="mb-1 flex justify-center">
+          <div className="relative inline-flex items-center">
+            {singleOpponent && (
+              <div className="flex items-center gap-2">
+                <CounterChip
+                  label={singleOpponent.name}
+                  value={singleOpponent.amount}
+                  disabled={player.eliminated}
+                  onChange={(delta) => onChangeCommanderDamage(singleOpponent.id, delta)}
+                />
+                {(poison > 0 || radiation > 0) && (
+                  <button
+                    onClick={onOpenCounters}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-800 px-2 py-1.5 active:scale-95"
+                  >
+                    {poison > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Image
+                          src="/poison-counter.png"
+                          alt=""
+                          width={10}
+                          height={10}
+                          className="h-2.5 w-2.5 object-contain"
+                          style={{ filter: "invert(1)" }}
+                        />
+                        <span className="text-xs font-bold tabular-nums text-white">{poison}</span>
+                      </span>
+                    )}
+                    {radiation > 0 && (
+                      <span className="flex items-center gap-1">
+                        <span className="text-xs leading-none">☢</span>
+                        <span className="text-xs font-bold tabular-nums text-white">{radiation}</span>
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!singleOpponent && groupOpponents && (
+              <DamageGrid
+                opponents={groupOpponents}
+                poison={poison}
+                radiation={radiation}
+                onOpen={onOpenCounters}
+              />
+            )}
+
             <button
               onClick={onOpenCounters}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-800 px-2 py-1.5 active:scale-95"
+              aria-label="Open counters"
+              className="absolute left-full ml-2 rounded-full bg-neutral-800/80 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
             >
-              {poison > 0 && (
-                <span className="flex items-center gap-1">
-                  <Image
-                    src="/poison-counter.png"
-                    alt=""
-                    width={10}
-                    height={10}
-                    className="h-2.5 w-2.5 object-contain"
-                    style={{ filter: "invert(1)" }}
-                  />
-                  <span className="text-xs font-bold tabular-nums text-white">{poison}</span>
-                </span>
-              )}
-              {radiation > 0 && (
-                <span className="flex items-center gap-1">
-                  <span className="text-xs leading-none">☢</span>
-                  <span className="text-xs font-bold tabular-nums text-white">{radiation}</span>
-                </span>
-              )}
+              ⊕
             </button>
-          )}
-        </div>
-      )}
-
-      {!singleOpponent && groupOpponents && (
-        <div className="mb-1 flex justify-center">
-          <DamageGrid
-            opponents={groupOpponents}
-            poison={poison}
-            radiation={radiation}
-            onOpen={onOpenCounters}
-          />
+          </div>
         </div>
       )}
 
@@ -173,13 +182,6 @@ export default function PlayerCard({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            onClick={onOpenCounters}
-            aria-label="Open counters"
-            className="rounded-full bg-neutral-800 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
-          >
-            ⊕
-          </button>
           <button
             onClick={onRotate}
             aria-label="Rotate this player's card"
@@ -194,30 +196,9 @@ export default function PlayerCard({
             >
               Revive
             </button>
-          ) : confirmingElimination ? (
-            <div className="flex gap-1">
-              <button
-                onClick={() => {
-                  setConfirmingElimination(false);
-                  onMarkDead();
-                }}
-                className="rounded-full bg-red-600 px-2 py-1 text-[10px] font-bold text-white active:scale-95"
-              >
-                Dead
-              </button>
-              <button
-                onClick={() => {
-                  setConfirmingElimination(false);
-                  onScoop();
-                }}
-                className="rounded-full bg-neutral-700 px-2 py-1 text-[10px] font-bold text-neutral-300 active:scale-95"
-              >
-                Scoop
-              </button>
-            </div>
           ) : (
             <button
-              onClick={() => setConfirmingElimination(true)}
+              onClick={onOpenElimination}
               className={`rounded-full px-2 py-1 text-xs font-bold ${
                 isLethal ? "bg-red-600 text-white animate-pulse" : "bg-neutral-800 text-neutral-500"
               }`}

@@ -29,6 +29,13 @@ function ordinal(n: number): string {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 }
 
+function eliminationLabel(reason: "commanderDamage" | "combatDamage" | "scoop" | null): string | null {
+  if (reason === "commanderDamage") return "Commander Damage";
+  if (reason === "combatDamage") return "Combat Damage";
+  if (reason === "scoop") return "Scooped";
+  return null;
+}
+
 export default function GameDetailModal({
   gameId,
   onClose,
@@ -103,7 +110,8 @@ export default function GameDetailModal({
                       }`}
                     >
                       {p.won ? "Win" : p.placement ? `${ordinal(p.placement)} place` : "—"}
-                      {p.eliminationReason === "scoop" && " · Scooped"}
+                      {eliminationLabel(p.eliminationReason) &&
+                        ` · ${eliminationLabel(p.eliminationReason)}`}
                     </span>
                   </div>
                   <p className="mt-1 truncate text-sm text-neutral-300">

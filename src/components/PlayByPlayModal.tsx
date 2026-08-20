@@ -19,6 +19,13 @@ function ordinal(n: number): string {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 }
 
+function eliminationLabel(reason: "commanderDamage" | "combatDamage" | "scoop" | null): string {
+  if (reason === "commanderDamage") return "commander damage";
+  if (reason === "combatDamage") return "combat damage";
+  if (reason === "scoop") return "scooped";
+  return "eliminated";
+}
+
 function describe(
   entry: GamePlayByPlayEntry,
   placement: number | null | undefined
@@ -27,7 +34,7 @@ function describe(
 
   if (entry.type === "eliminated") {
     return {
-      text: `${name} eliminated${entry.eliminationReason === "scoop" ? " — scooped" : ""}`,
+      text: `${name} eliminated — ${eliminationLabel(entry.eliminationReason)}`,
       color: "text-red-400",
       suffix: placement ? `${ordinal(placement)} place` : undefined,
     };

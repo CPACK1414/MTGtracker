@@ -1,3 +1,5 @@
+export type EliminationReason = "commanderDamage" | "combatDamage" | "scoop";
+
 export type Player = {
   id: string;
   profileId: string;
@@ -8,7 +10,7 @@ export type Player = {
   artCropUrl?: string | null;
   life: number;
   eliminated: boolean;
-  eliminationReason?: "dead" | "scoop";
+  eliminationReason?: EliminationReason;
 };
 
 export type PodSelection = {

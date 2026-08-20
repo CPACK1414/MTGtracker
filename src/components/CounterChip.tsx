@@ -28,7 +28,7 @@ export default function CounterChip({
       : "text-neutral-200";
 
   return (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-neutral-800 pl-1">
+    <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-neutral-800/80 pl-1">
       <button
         disabled={disabled}
         onPointerDown={() => minusHold.start(() => onChange(-10))}
@@ -55,7 +55,7 @@ export default function CounterChip({
           }}
         />
       ) : (
-        <span className="max-w-12 truncate text-[10px] font-medium text-neutral-500">{label}</span>
+        <span className="max-w-12 truncate text-[10px] font-semibold text-neutral-300">{label}</span>
       )}
       <span className={`w-5 text-center text-sm font-bold tabular-nums ${valueColor}`}>
         {value}

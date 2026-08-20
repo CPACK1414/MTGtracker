@@ -29,6 +29,13 @@ function ordinal(n: number): string {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 }
 
+function eliminationLabel(reason: "commanderDamage" | "combatDamage" | "scoop" | null): string | null {
+  if (reason === "commanderDamage") return "Commander Damage";
+  if (reason === "combatDamage") return "Combat Damage";
+  if (reason === "scoop") return "Scooped";
+  return null;
+}
+
 export default function PlayerHistoryModal({
   playerId,
   playerName,
@@ -93,7 +100,8 @@ export default function PlayerHistoryModal({
                     }`}
                   >
                     {g.won ? "Win" : g.placement ? `${ordinal(g.placement)} place` : "Loss"}
-                    {g.eliminationReason === "scoop" && " · Scooped"}
+                    {eliminationLabel(g.eliminationReason) &&
+                      ` · ${eliminationLabel(g.eliminationReason)}`}
                   </span>
                 </div>
                 {(g.commander || g.deckName) && (

@@ -8,6 +8,7 @@ import {
   makePlayers,
   type PodSelection,
   type Player,
+  type EliminationReason,
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
 import { saveGame, type GameEventInput } from "@/app/actions";
@@ -20,6 +21,7 @@ import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
 import CounterModal from "@/components/CounterModal";
+import EliminationModal from "@/components/EliminationModal";
 import StatsScreen from "@/components/StatsScreen";
 import GameTimer from "@/components/GameTimer";
 import GameHistoryScreen from "@/components/GameHistoryScreen";
@@ -49,6 +51,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [saveError, setSaveError] = useState<string | null>(null);
   const [rotations, setRotations] = useState<Record<string, Rotation>>({});
   const [counterModalPlayerId, setCounterModalPlayerId] = useState<string | null>(null);
+  const [eliminationModalPlayerId, setEliminationModalPlayerId] = useState<string | null>(null);
   const [gameStartedAt, setGameStartedAt] = useState<number | null>(null);
 
   const eventsRef = useRef<GameEventInput[]>([]);
@@ -117,7 +120,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   function logInstantEvent(
     playerId: string,
     type: "eliminated" | "revived",
-    eliminationReason?: "dead" | "scoop" | null
+    eliminationReason?: EliminationReason | null
   ) {
     eventsRef.current.push({
       elapsedSeconds: elapsedSecondsNow(),
@@ -186,6 +189,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setSaveError(null);
     setRotations({});
     setCounterModalPlayerId(null);
+    setEliminationModalPlayerId(null);
     setGameStartedAt(null);
     setHomeScreen("welcome");
 
@@ -205,7 +209,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     queueChange(id, kind, delta);
   }
 
-  function eliminatePlayer(id: string, reason: "dead" | "scoop") {
+  function eliminatePlayer(id: string, reason: EliminationReason) {
     setPlayers((prev) =>
       prev
         ? prev.map((p) => (p.id === id ? { ...p, eliminated: true, eliminationReason: reason } : p))
@@ -426,8 +430,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
                 poison={poison[p.id] ?? 0}
                 radiation={radiation[p.id] ?? 0}
                 onChangeLife={(delta) => changeLife(p.id, delta)}
-                onMarkDead={() => eliminatePlayer(p.id, "dead")}
-                onScoop={() => eliminatePlayer(p.id, "scoop")}
+                onOpenElimination={() => setEliminationModalPlayerId(p.id)}
                 onRevive={() => revivePlayer(p.id)}
                 onRotate={() => rotatePlayer(p.id)}
                 onChangeCommanderDamage={(fromId, delta) => changeDamage(fromId, p.id, delta)}
@@ -456,6 +459,23 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
               onChangePoison={(delta) => changePoison(p.id, delta)}
               onChangeRadiation={(delta) => changeRadiation(p.id, delta)}
               onClose={() => setCounterModalPlayerId(null)}
+            />
+          );
+        })()}
+
+      {eliminationModalPlayerId &&
+        (() => {
+          const p = players.find((pl) => pl.id === eliminationModalPlayerId);
+          if (!p) return null;
+          return (
+            <EliminationModal
+              playerName={p.name}
+              rotation={rotations[p.id] ?? 0}
+              onPick={(reason) => {
+                eliminatePlayer(p.id, reason);
+                setEliminationModalPlayerId(null);
+              }}
+              onCancel={() => setEliminationModalPlayerId(null)}
             />
           );
         })()}
