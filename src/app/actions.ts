@@ -267,11 +267,15 @@ export type PlayerGroupMatchup = {
 export type FunStatEntry = { name: string; screenName: string | null };
 export type FunStatRank = { rank: number; count: number; entries: FunStatEntry[] };
 export type CommanderStatRank = { rank: number; count: number; commanders: string[] };
+export type EliminationReasonRank = { rank: number; count: number; reasons: string[] };
+export type PlacementStat = { count: number; entries: FunStatEntry[] };
 export type FunStats = {
   mostScoops: FunStatRank[];
   mostLosses: FunStatRank[];
   mostPlayedCommander: CommanderStatRank[];
   mostGamesPlayed: FunStatRank[];
+  eliminationReasons: EliminationReasonRank[];
+  runnerUp: { secondPlace: PlacementStat; thirdPlace: PlacementStat; fourthPlace: PlacementStat };
   longestAvgGame: { name: string; screenName: string | null; avgDurationSeconds: number }[];
 };
 
@@ -495,11 +499,57 @@ export async function getReportingData(
             };
           });
 
+  const eliminationReasonLabels: Record<string, string> = {
+    commanderDamage: "Commander Damage",
+    combatDamage: "Combat Damage",
+    scoop: "Scoop",
+  };
+  const eliminationReasonCounts = new Map<string, number>();
+  for (const gp of allParticipants) {
+    if (!gp.eliminationReason || !(gp.eliminationReason in eliminationReasonLabels)) continue;
+    eliminationReasonCounts.set(
+      gp.eliminationReason,
+      (eliminationReasonCounts.get(gp.eliminationReason) ?? 0) + 1
+    );
+  }
+  const eliminationReasons: EliminationReasonRank[] = topRanks(eliminationReasonCounts, 3).map(
+    ({ rank, count, ids }) => ({
+      rank,
+      count,
+      reasons: ids.map((id) => eliminationReasonLabels[id] ?? id),
+    })
+  );
+
+  function placementStat(placement: number): PlacementStat {
+    const counts = new Map<string, number>();
+    for (const gp of allParticipants) {
+      if (gp.placement !== placement) continue;
+      counts.set(gp.playerId, (counts.get(gp.playerId) ?? 0) + 1);
+    }
+    const top = topRanks(counts, 1)[0];
+    if (!top) return { count: 0, entries: [] };
+    return {
+      count: top.count,
+      entries: top.ids.map((id) => {
+        const p = playersById.get(id);
+        return { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null };
+      }),
+    };
+  }
+
+  const runnerUp = {
+    secondPlace: placementStat(2),
+    thirdPlace: placementStat(3),
+    fourthPlace: placementStat(4),
+  };
+
   const funStats: FunStats = {
     mostScoops: topPlayerRanks(scoopCounts),
     mostLosses: topPlayerRanks(lossCounts),
     mostPlayedCommander,
     mostGamesPlayed: topPlayerRanks(gamesPlayedCounts),
+    eliminationReasons,
+    runnerUp,
     longestAvgGame,
   };
 

@@ -477,12 +477,14 @@ function RankedFunStatCard({
   ranks,
   unitSingular,
   unitPlural,
+  showRankLabel = true,
 }: {
   emoji: string;
   label: string;
   ranks: { rank: number; count: number; names: string[] }[];
   unitSingular: string;
   unitPlural: string;
+  showRankLabel?: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
@@ -495,9 +497,11 @@ function RankedFunStatCard({
         <div className="flex flex-col gap-2">
           {ranks.map((r) => (
             <div key={r.rank}>
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                {rankLabel(r.rank)}
-              </p>
+              {showRankLabel && (
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  {rankLabel(r.rank)}
+                </p>
+              )}
               <div className="flex flex-col gap-0.5">
                 {r.names.map((name, i) => (
                   <div key={i} className="flex items-center justify-between gap-2">
@@ -516,6 +520,56 @@ function RankedFunStatCard({
   );
 }
 
+function PlacementRow({
+  label,
+  stat,
+}: {
+  label: string;
+  stat: { count: number; entries: { name: string; screenName: string | null }[] };
+}) {
+  return (
+    <div>
+      <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+        {label}
+      </p>
+      {stat.entries.length === 0 ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex flex-col gap-0.5">
+          {stat.entries.map((e, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <span className="truncate font-semibold text-white">
+                {displayName(e.name, e.screenName)}
+              </span>
+              <span className="shrink-0 font-black tabular-nums text-emerald-400">
+                {stat.count} {stat.count === 1 ? "finish" : "finishes"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RunnerUpStatsCard({ runnerUp }: { runnerUp: ReportingData["funStats"]["runnerUp"] }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        🥈 Runner Up Stats
+      </p>
+      <p className="mb-2 text-[11px] text-neutral-600">
+        Who finishes just short of the win, most often.
+      </p>
+      <div className="flex flex-col gap-2">
+        <PlacementRow label="2nd Place Finishes" stat={runnerUp.secondPlace} />
+        <PlacementRow label="3rd Place Finishes" stat={runnerUp.thirdPlace} />
+        <PlacementRow label="4th Place Finishes" stat={runnerUp.fourthPlace} />
+      </div>
+    </div>
+  );
+}
+
 function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
   return (
     <div className="flex flex-col gap-2">
@@ -530,6 +584,7 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
         unitSingular="loss"
         unitPlural="losses"
       />
+      <RunnerUpStatsCard runnerUp={stats.runnerUp} />
       <RankedFunStatCard
         emoji="🏳️"
         label="Scoops the most"
@@ -562,6 +617,18 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
         }))}
         unitSingular="game"
         unitPlural="games"
+      />
+      <RankedFunStatCard
+        emoji="☠️"
+        label="Elimination Counts"
+        ranks={stats.eliminationReasons.map((r) => ({
+          rank: r.rank,
+          count: r.count,
+          names: r.reasons,
+        }))}
+        unitSingular="elimination"
+        unitPlural="eliminations"
+        showRankLabel={false}
       />
       <FunStatCard
         emoji="⏱️"
