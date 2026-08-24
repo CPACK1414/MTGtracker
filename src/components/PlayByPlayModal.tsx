@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getGamePlayByPlay, type GamePlayByPlay, type GamePlayByPlayEntry } from "@/app/actions";
+import {
+  getGameLifeChart,
+  getGamePlayByPlay,
+  type GameLifeChart,
+  type GamePlayByPlay,
+  type GamePlayByPlayEntry,
+} from "@/app/actions";
+import LifeChart from "@/components/LifeChart";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -99,10 +106,15 @@ export default function PlayByPlayModal({
   onClose: () => void;
 }) {
   const [data, setData] = useState<GamePlayByPlay | null>(null);
+  const [chart, setChart] = useState<GameLifeChart | null>(null);
+  const [showGraph, setShowGraph] = useState(false);
 
   useEffect(() => {
     setData(null);
+    setChart(null);
+    setShowGraph(false);
     getGamePlayByPlay(gameId).then(setData);
+    getGameLifeChart(gameId).then(setChart);
   }, [gameId]);
 
   const isEmpty = data && !data.hasTurnData && data.flatEntries.length === 0;
@@ -111,14 +123,22 @@ export default function PlayByPlayModal({
   return (
     <div className="fixed inset-0 z-[70] flex flex-col justify-end bg-black/80 sm:items-center sm:justify-center">
       <div className="flex max-h-[85vh] flex-col gap-3 overflow-y-auto rounded-t-3xl bg-neutral-900 p-5 sm:w-full sm:max-w-sm sm:rounded-3xl">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-white">Play by Play</h2>
-          <button
-            onClick={onClose}
-            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white active:scale-95"
-          >
-            Done
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowGraph(true)}
+              className="rounded-full bg-neutral-800 px-3 py-2 text-sm font-bold text-neutral-300 active:scale-95"
+            >
+              📈 Graph
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white active:scale-95"
+            >
+              Done
+            </button>
+          </div>
         </div>
 
         {!data ? (
@@ -161,6 +181,36 @@ export default function PlayByPlayModal({
           </div>
         )}
       </div>
+
+      {showGraph && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95">
+          <div
+            style={{ width: "100vh", height: "100vw", transform: "rotate(90deg)" }}
+            className="flex shrink-0 flex-col gap-2 p-3"
+          >
+            <div className="flex shrink-0 items-center justify-between px-2">
+              <h2 className="text-base font-bold text-white">Life Totals</h2>
+              <button
+                onClick={() => setShowGraph(false)}
+                className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              {!chart ? (
+                <p className="text-center text-sm text-neutral-500">Loading…</p>
+              ) : chart.hasData ? (
+                <LifeChart chart={chart} />
+              ) : (
+                <p className="text-center text-sm text-neutral-500">
+                  Not enough data recorded for this game.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

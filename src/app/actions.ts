@@ -977,6 +977,97 @@ export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlay>
   return { hasTurnData, brackets, flatEntries };
 }
 
+export type LifeChartPoint = { elapsedSeconds: number; life: number };
+export type LifeChartSeries = {
+  playerId: string;
+  playerName: string;
+  playerScreenName: string | null;
+  points: LifeChartPoint[];
+  eliminatedAt: { elapsedSeconds: number; life: number; reason: EliminationReason | null } | null;
+};
+export type GameLifeChart = {
+  durationSeconds: number;
+  hasData: boolean;
+  series: LifeChartSeries[];
+};
+
+export async function getGameLifeChart(gameId: string): Promise<GameLifeChart | null> {
+  const [game] = await db.select().from(games).where(eq(games.id, gameId));
+  if (!game) return null;
+
+  const [participantRows, eventRows] = await Promise.all([
+    db
+      .select()
+      .from(gameParticipants)
+      .where(eq(gameParticipants.gameId, gameId))
+      .orderBy(gameParticipants.seatOrder),
+    db.select().from(gameEvents).where(eq(gameEvents.gameId, gameId)).orderBy(gameEvents.elapsedSeconds),
+  ]);
+
+  const playerIds = participantRows.map((p) => p.playerId);
+  const playerRows = playerIds.length
+    ? await db.select().from(players).where(inArray(players.id, playerIds))
+    : [];
+  const playersById = new Map(playerRows.map((p) => [p.id, p]));
+
+  const durationSeconds = game.durationSeconds ?? 0;
+  const hasData = eventRows.some((e) => e.type === "change" || e.type === "eliminated");
+
+  const series: LifeChartSeries[] = participantRows.map((p) => {
+    const player = playersById.get(p.playerId);
+    return {
+      playerId: p.playerId,
+      playerName: player?.name ?? "Unknown",
+      playerScreenName: player?.screenName ?? null,
+      points: [{ elapsedSeconds: 0, life: STARTING_LIFE }],
+      eliminatedAt: null,
+    };
+  });
+  const seriesByPlayer = new Map(series.map((s) => [s.playerId, s]));
+  const lifeByPlayer = new Map(participantRows.map((p) => [p.playerId, STARTING_LIFE]));
+  const eliminatedSet = new Set<string>();
+
+  for (const e of eventRows) {
+    const s = seriesByPlayer.get(e.playerId);
+    if (!s) continue;
+
+    if (e.type === "change") {
+      if (eliminatedSet.has(e.playerId)) continue;
+      const delta = (e.lifeDelta ?? 0) + (e.commanderDamageDelta ?? 0);
+      if (delta === 0) continue;
+      const life = (lifeByPlayer.get(e.playerId) ?? STARTING_LIFE) + delta;
+      lifeByPlayer.set(e.playerId, life);
+      s.points.push({ elapsedSeconds: e.elapsedSeconds, life });
+    } else if (e.type === "eliminated") {
+      const life = lifeByPlayer.get(e.playerId) ?? STARTING_LIFE;
+      s.points.push({ elapsedSeconds: e.elapsedSeconds, life });
+      s.eliminatedAt = {
+        elapsedSeconds: e.elapsedSeconds,
+        life,
+        reason: e.eliminationReason as EliminationReason | null,
+      };
+      eliminatedSet.add(e.playerId);
+    } else if (e.type === "revived") {
+      eliminatedSet.delete(e.playerId);
+      s.eliminatedAt = null;
+      const life = lifeByPlayer.get(e.playerId) ?? STARTING_LIFE;
+      s.points.push({ elapsedSeconds: e.elapsedSeconds, life });
+    }
+  }
+
+  for (const s of series) {
+    if (!eliminatedSet.has(s.playerId)) {
+      const life = lifeByPlayer.get(s.playerId) ?? STARTING_LIFE;
+      const last = s.points[s.points.length - 1];
+      if (last.elapsedSeconds < durationSeconds) {
+        s.points.push({ elapsedSeconds: durationSeconds, life });
+      }
+    }
+  }
+
+  return { durationSeconds, hasData, series };
+}
+
 export type GameHistoryEntry = {
   gameId: string;
   playedAt: string;
