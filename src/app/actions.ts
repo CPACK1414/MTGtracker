@@ -988,6 +988,7 @@ export type LifeChartSeries = {
 export type GameLifeChart = {
   durationSeconds: number;
   hasData: boolean;
+  winnerPlayerId: string | null;
   series: LifeChartSeries[];
 };
 
@@ -1065,7 +1066,7 @@ export async function getGameLifeChart(gameId: string): Promise<GameLifeChart | 
     }
   }
 
-  return { durationSeconds, hasData, series };
+  return { durationSeconds, hasData, winnerPlayerId: game.winnerPlayerId, series };
 }
 
 export type GameHistoryEntry = {

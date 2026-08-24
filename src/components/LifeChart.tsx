@@ -65,7 +65,7 @@ export default function LifeChart({ chart }: { chart: GameLifeChart }) {
       <div className="min-h-0 flex-1 rounded-xl bg-neutral-800/40 p-2">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="none"
+          preserveAspectRatio="xMidYMid meet"
           className="h-full w-full"
         >
           {gridLines.map((v) => (
@@ -140,6 +140,23 @@ export default function LifeChart({ chart }: { chart: GameLifeChart }) {
                     />
                   </g>
                 )}
+                {chart.winnerPlayerId === s.playerId &&
+                  s.points.length > 0 &&
+                  (() => {
+                    const last = s.points[s.points.length - 1];
+                    return (
+                      <text
+                        x={x(last.elapsedSeconds)}
+                        y={y(last.life)}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={16}
+                        pointerEvents="none"
+                      >
+                        🏆
+                      </text>
+                    );
+                  })()}
               </g>
             );
           })}
