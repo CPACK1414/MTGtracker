@@ -725,16 +725,6 @@ export async function getReportingData(
   }
   const longestTurnAvg = topPlayerRanks(turnAvgByPlayer, 3);
 
-  const turnCountsByGame = new Map<string, number>();
-  for (const e of turnEndedEvents) {
-    turnCountsByGame.set(e.gameId, (turnCountsByGame.get(e.gameId) ?? 0) + 1);
-  }
-  const gamesWithTurnData = Array.from(turnCountsByGame.values());
-  const avgTurnsPerGame =
-    gamesWithTurnData.length > 0
-      ? gamesWithTurnData.reduce((sum, c) => sum + c, 0) / gamesWithTurnData.length
-      : null;
-
   const speedDemon = bottomPlayerRanks(turnAvgByPlayer, 3);
 
   const eventsByGameAll = new Map<string, typeof allEvents>();
@@ -752,6 +742,47 @@ export async function getReportingData(
   for (const list of participantsByGameSeated.values()) {
     list.sort((a, b) => a.seatOrder - b.seatOrder);
   }
+
+  // "Average Turns Per Game" counts trips around the table (rounds), not
+  // individual player turns — mirrors the live "Turn N" round counter: it
+  // starts at 1 and increments each time the turn order wraps back around
+  // to whoever went first. Elimination state is tracked live, in
+  // chronological order, since a player eliminated partway through the game
+  // was still in the rotation for earlier turns.
+  const roundCountByGame = new Map<string, number>();
+  for (const [gameId, gEvents] of eventsByGameAll) {
+    const game = allGames.find((g) => g.id === gameId);
+    if (!game || !game.firstPlayerId) continue;
+    const sorted = [...gEvents].sort((a, b) => a.elapsedSeconds - b.elapsedSeconds);
+    if (!sorted.some((e) => e.type === "turnEnded")) continue;
+    const seatOrder = (participantsByGameSeated.get(gameId) ?? []).map((p) => p.playerId);
+
+    const eliminatedLive = new Set<string>();
+    let rounds = 1;
+    for (const e of sorted) {
+      if (e.type === "eliminated") {
+        eliminatedLive.add(e.playerId);
+      } else if (e.type === "revived") {
+        eliminatedLive.delete(e.playerId);
+      } else if (e.type === "turnEnded") {
+        const idx = seatOrder.indexOf(e.playerId);
+        if (idx === -1) continue;
+        for (let step = 1; step <= seatOrder.length; step++) {
+          const candidateId = seatOrder[(idx + step) % seatOrder.length];
+          if (!eliminatedLive.has(candidateId)) {
+            if (candidateId === game.firstPlayerId) rounds++;
+            break;
+          }
+        }
+      }
+    }
+    roundCountByGame.set(gameId, rounds);
+  }
+  const gamesWithRoundData = Array.from(roundCountByGame.values());
+  const avgTurnsPerGame =
+    gamesWithRoundData.length > 0
+      ? gamesWithRoundData.reduce((sum, c) => sum + c, 0) / gamesWithRoundData.length
+      : null;
 
   const reaperCounts = new Map<string, number>();
   for (const [gameId, gEvents] of eventsByGameAll) {
