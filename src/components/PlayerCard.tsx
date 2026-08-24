@@ -84,7 +84,7 @@ export default function PlayerCard({
         player.eliminated
           ? "border-neutral-800 bg-neutral-900/50 opacity-50"
           : isCurrentTurn
-          ? "border-emerald-400 bg-neutral-900 ring-2 ring-emerald-400/70"
+          ? "turn-indicator bg-neutral-900"
           : "border-neutral-800 bg-neutral-900"
       }`}
       style={
