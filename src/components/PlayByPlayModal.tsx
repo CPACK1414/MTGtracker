@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getGamePlayByPlay, type GamePlayByPlayEntry } from "@/app/actions";
+import { getGamePlayByPlay, type GamePlayByPlay, type GamePlayByPlayEntry } from "@/app/actions";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -42,12 +42,6 @@ function describe(
   if (entry.type === "revived") {
     return { text: `${name} revived`, color: "text-emerald-400" };
   }
-  if (entry.type === "turnEnded") {
-    return {
-      text: `${name} ended their turn — ${formatElapsed(entry.turnDurationSeconds ?? 0)}`,
-      color: "text-neutral-400",
-    };
-  }
 
   const parts: string[] = [];
   if (entry.lifeDelta) parts.push(`${entry.lifeDelta > 0 ? "+" : ""}${entry.lifeDelta} life`);
@@ -70,6 +64,27 @@ function describe(
   };
 }
 
+function EntryRow({
+  entry,
+  placement,
+}: {
+  entry: GamePlayByPlayEntry;
+  placement: number | null | undefined;
+}) {
+  const { text, color, suffix } = describe(entry, placement);
+  return (
+    <div className="flex items-start gap-3 rounded-xl bg-neutral-800/40 px-3 py-2">
+      <span className="mt-0.5 shrink-0 text-xs font-semibold tabular-nums text-neutral-500">
+        {formatElapsed(entry.elapsedSeconds)}
+      </span>
+      <span className="text-sm font-semibold">
+        <span className={color}>{text}</span>
+        {suffix && <span className="text-white"> · {suffix}</span>}
+      </span>
+    </div>
+  );
+}
+
 export default function PlayByPlayModal({
   gameId,
   winnerName,
@@ -83,12 +98,15 @@ export default function PlayByPlayModal({
   placements: Record<string, number | null>;
   onClose: () => void;
 }) {
-  const [entries, setEntries] = useState<GamePlayByPlayEntry[] | null>(null);
+  const [data, setData] = useState<GamePlayByPlay | null>(null);
 
   useEffect(() => {
-    setEntries(null);
-    getGamePlayByPlay(gameId).then(setEntries);
+    setData(null);
+    getGamePlayByPlay(gameId).then(setData);
   }, [gameId]);
+
+  const isEmpty = data && !data.hasTurnData && data.flatEntries.length === 0;
+  const isEmptyBrackets = data && data.hasTurnData && data.brackets.every((b) => b.entries.length === 0);
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col justify-end bg-black/80 sm:items-center sm:justify-center">
@@ -103,32 +121,36 @@ export default function PlayByPlayModal({
           </button>
         </div>
 
-        {!entries ? (
+        {!data ? (
           <p className="mt-6 text-center text-sm text-neutral-500">Loading…</p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {entries.length === 0 && (
+          <div className="flex flex-col gap-3">
+            {(isEmpty || isEmptyBrackets) && (
               <p className="mt-6 text-center text-sm text-neutral-500">
                 No play-by-play recorded for this game.
               </p>
             )}
-            {entries.map((entry) => {
-              const { text, color, suffix } = describe(entry, placements[entry.playerId]);
-              return (
-                <div
-                  key={entry.id}
-                  className="flex items-start gap-3 rounded-xl bg-neutral-800/40 px-3 py-2"
-                >
-                  <span className="mt-0.5 shrink-0 text-xs font-semibold tabular-nums text-neutral-500">
-                    {formatElapsed(entry.elapsedSeconds)}
-                  </span>
-                  <span className="text-sm font-semibold">
-                    <span className={color}>{text}</span>
-                    {suffix && <span className="text-white"> · {suffix}</span>}
-                  </span>
-                </div>
-              );
-            })}
+
+            {data.hasTurnData
+              ? data.brackets.map((bracket, i) => (
+                  <div key={i} className="flex flex-col gap-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                      {displayName(bracket.turnPlayerName, bracket.turnPlayerScreenName)}&apos;s Turn
+                      {bracket.durationSeconds != null
+                        ? ` · ${formatElapsed(bracket.durationSeconds)}`
+                        : " (in progress)"}
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {bracket.entries.map((entry) => (
+                        <EntryRow key={entry.id} entry={entry} placement={placements[entry.playerId]} />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              : data.flatEntries.map((entry) => (
+                  <EntryRow key={entry.id} entry={entry} placement={placements[entry.playerId]} />
+                ))}
+
             {winnerName && (
               <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2">
                 <span className="text-sm font-bold text-emerald-400">

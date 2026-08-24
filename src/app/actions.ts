@@ -584,10 +584,10 @@ export async function getReportingData(
     [];
   for (const e of allEvents) {
     if (e.type !== "change") continue;
-    if (e.commanderDamageDelta && e.commanderDamageDelta > 0) {
+    if (e.commanderDamageDelta && e.commanderDamageDelta < 0) {
       hitCandidates.push({
         type: "commanderDamage",
-        amount: e.commanderDamageDelta,
+        amount: -e.commanderDamageDelta,
         playerId: e.playerId,
       });
     }
@@ -864,20 +864,39 @@ export type GamePlayByPlayEntry = {
   turnDurationSeconds: number | null;
 };
 
-export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayEntry[]> {
-  const rows = await db
-    .select()
-    .from(gameEvents)
-    .where(eq(gameEvents.gameId, gameId))
-    .orderBy(gameEvents.elapsedSeconds);
+export type PlayByPlayTurnBracket = {
+  turnPlayerId: string;
+  turnPlayerName: string;
+  turnPlayerScreenName: string | null;
+  durationSeconds: number | null;
+  entries: GamePlayByPlayEntry[];
+};
 
-  const playerIds = Array.from(new Set(rows.map((r) => r.playerId)));
+export type GamePlayByPlay = {
+  hasTurnData: boolean;
+  brackets: PlayByPlayTurnBracket[];
+  flatEntries: GamePlayByPlayEntry[];
+};
+
+export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlay> {
+  const [rows, participantRows] = await Promise.all([
+    db.select().from(gameEvents).where(eq(gameEvents.gameId, gameId)).orderBy(gameEvents.elapsedSeconds),
+    db
+      .select()
+      .from(gameParticipants)
+      .where(eq(gameParticipants.gameId, gameId))
+      .orderBy(gameParticipants.seatOrder),
+  ]);
+
+  const playerIds = Array.from(
+    new Set([...rows.map((r) => r.playerId), ...participantRows.map((p) => p.playerId)])
+  );
   const playerRows = playerIds.length
     ? await db.select().from(players).where(inArray(players.id, playerIds))
     : [];
   const playersById = new Map(playerRows.map((p) => [p.id, p]));
 
-  return rows.map((r) => ({
+  const flatEntries: GamePlayByPlayEntry[] = rows.map((r) => ({
     id: r.id,
     elapsedSeconds: r.elapsedSeconds,
     type: r.type as "change" | "eliminated" | "revived" | "turnEnded",
@@ -891,6 +910,54 @@ export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayE
     eliminationReason: r.eliminationReason as EliminationReason | null,
     turnDurationSeconds: r.turnDurationSeconds,
   }));
+
+  const turnEndedEntries = flatEntries.filter((e) => e.type === "turnEnded");
+  const hasTurnData = turnEndedEntries.length > 0;
+
+  const brackets: PlayByPlayTurnBracket[] = [];
+  if (hasTurnData) {
+    let buffer: GamePlayByPlayEntry[] = [];
+    for (const entry of flatEntries) {
+      if (entry.type === "turnEnded") {
+        brackets.push({
+          turnPlayerId: entry.playerId,
+          turnPlayerName: entry.playerName,
+          turnPlayerScreenName: entry.playerScreenName,
+          durationSeconds: entry.turnDurationSeconds,
+          entries: buffer,
+        });
+        buffer = [];
+      } else {
+        buffer.push(entry);
+      }
+    }
+    if (buffer.length > 0) {
+      const lastTurnPlayerId = turnEndedEntries[turnEndedEntries.length - 1].playerId;
+      const idx = participantRows.findIndex((p) => p.playerId === lastTurnPlayerId);
+      let nextPlayerId: string | null = null;
+      if (idx === -1) {
+        nextPlayerId = participantRows.find((p) => !p.eliminationReason)?.playerId ?? null;
+      } else {
+        for (let step = 1; step <= participantRows.length; step++) {
+          const candidate = participantRows[(idx + step) % participantRows.length];
+          if (!candidate.eliminationReason) {
+            nextPlayerId = candidate.playerId;
+            break;
+          }
+        }
+      }
+      const turnPlayerId = nextPlayerId ?? lastTurnPlayerId;
+      brackets.push({
+        turnPlayerId,
+        turnPlayerName: playersById.get(turnPlayerId)?.name ?? "Unknown",
+        turnPlayerScreenName: playersById.get(turnPlayerId)?.screenName ?? null,
+        durationSeconds: null,
+        entries: buffer,
+      });
+    }
+  }
+
+  return { hasTurnData, brackets, flatEntries };
 }
 
 export type GameHistoryEntry = {
