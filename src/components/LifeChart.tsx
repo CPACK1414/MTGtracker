@@ -18,6 +18,7 @@ function displayName(name: string, screenName: string | null) {
 function eliminationLabel(reason: string | null): string {
   if (reason === "commanderDamage") return "commander damage";
   if (reason === "combatDamage") return "combat damage";
+  if (reason === "poison") return "poison";
   if (reason === "scoop") return "scooped";
   return "eliminated";
 }

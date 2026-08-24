@@ -44,6 +44,12 @@ export default function EliminationModal({
             Combat Damage
           </button>
           <button
+            onClick={() => onPick("poison")}
+            className="rounded-2xl bg-neutral-800 py-4 text-base font-bold text-white active:scale-95"
+          >
+            Poison
+          </button>
+          <button
             onClick={() => onPick("scoop")}
             className="rounded-2xl bg-red-950 py-4 text-base font-bold text-red-300 active:scale-95"
           >

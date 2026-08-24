@@ -172,7 +172,10 @@ export default function GameHistoryScreen({ onBack }: { onBack: () => void }) {
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-neutral-500">
                   <span className="truncate">{g.podSize}-player pod</span>
-                  <span className="shrink-0 tabular-nums">{formatDuration(g.durationSeconds)}</span>
+                  <span className="shrink-0 tabular-nums">
+                    {g.turnCount != null && `${g.turnCount} turn${g.turnCount === 1 ? "" : "s"} · `}
+                    {formatDuration(g.durationSeconds)}
+                  </span>
                 </div>
               </button>
             ))}

@@ -625,6 +625,33 @@ function BiggestHitCard({ biggestHit }: { biggestHit: ReportingData["funStats"][
   );
 }
 
+function BiggestComebackCard({
+  comeback,
+}: {
+  comeback: ReportingData["funStats"]["biggestComeback"];
+}) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        🔥 Biggest Comeback
+      </p>
+      {!comeback ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {comeback.entries.map((e, i) => (
+            <div key={i}>
+              <span className="font-semibold text-white">
+                {displayName(e.name, e.screenName)} won after dropping to {comeback.minLife} life
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DamageDealtCard({ totalDamage }: { totalDamage: ReportingData["funStats"]["totalDamage"] }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
@@ -644,16 +671,30 @@ function DamageDealtCard({ totalDamage }: { totalDamage: ReportingData["funStats
             {totalDamage.commanderDamage}
           </span>
         </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold text-white">Total Poison Damage</span>
+          <span className="shrink-0 font-black tabular-nums text-emerald-400">
+            {totalDamage.poisonDamage}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
-function LongestTurnAvgCard({ ranks }: { ranks: ReportingData["funStats"]["longestTurnAvg"] }) {
+function TurnDurationRankCard({
+  emoji,
+  label,
+  ranks,
+}: {
+  emoji: string;
+  label: string;
+  ranks: ReportingData["funStats"]["longestTurnAvg"];
+}) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        🐌 Longest Turn On Average
+        {emoji} {label}
       </p>
       {ranks.length === 0 ? (
         <p className="text-sm text-neutral-600">Not enough data yet</p>
@@ -701,106 +742,157 @@ function AvgTurnsPerGameCard({ avgTurnsPerGame }: { avgTurnsPerGame: number | nu
   );
 }
 
-function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
+function CollapsibleSection({
+  title,
+  emoji,
+  children,
+}: {
+  title: string;
+  emoji: string;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
   return (
     <div className="flex flex-col gap-2">
-      <RankedFunStatCard
-        emoji="💀"
-        label="Professional Loser"
-        ranks={stats.mostLosses.map((r) => ({
-          rank: r.rank,
-          count: r.count,
-          names: r.entries.map((e) => displayName(e.name, e.screenName)),
-        }))}
-        unitSingular="loss"
-        unitPlural="losses"
-      />
-      <RunnerUpStatsCard runnerUp={stats.runnerUp} />
-      <RankedFunStatCard
-        emoji="🏳️"
-        label="First to Fold"
-        explainer="Most scoops"
-        ranks={stats.mostScoops.map((r) => ({
-          rank: r.rank,
-          count: r.count,
-          names: r.entries.map((e) => displayName(e.name, e.screenName)),
-        }))}
-        unitSingular="scoop"
-        unitPlural="scoops"
-      />
-      <RankedFunStatCard
-        emoji="🎮"
-        label="Plays the most"
-        ranks={stats.mostGamesPlayed.map((r) => ({
-          rank: r.rank,
-          count: r.count,
-          names: r.entries.map((e) => displayName(e.name, e.screenName)),
-        }))}
-        unitSingular="game"
-        unitPlural="games"
-      />
-      <RankedFunStatCard
-        emoji="⭐"
-        label="Most played commander"
-        ranks={stats.mostPlayedCommander.map((r) => ({
-          rank: r.rank,
-          count: r.count,
-          names: r.commanders,
-        }))}
-        unitSingular="game"
-        unitPlural="games"
-      />
-      <RankedFunStatCard
-        emoji="🎯"
-        label="Biggest Target"
-        explainer="Eliminated first most often"
-        ranks={stats.biggestTarget.map((r) => ({
-          rank: r.rank,
-          count: r.count,
-          names: r.entries.map((e) => displayName(e.name, e.screenName)),
-        }))}
-        unitSingular="game"
-        unitPlural="games"
-        showRankLabel={false}
-      />
-      <FirstPlayerWinRateCard stat={stats.firstPlayerWinRate} />
-      <RankedFunStatCard
-        emoji="☠️"
-        label="Cause of Death"
-        ranks={stats.eliminationReasons.map((r) => ({
-          rank: r.rank,
-          count: r.count,
-          names: r.reasons,
-        }))}
-        unitSingular="elimination"
-        unitPlural="eliminations"
-        showRankLabel={false}
-      />
-      <BiggestHitCard biggestHit={stats.biggestHit} />
-      <DamageDealtCard totalDamage={stats.totalDamage} />
-      <FunStatCard
-        emoji="🕰️"
-        label="Longest Turn Ever"
-        entries={
-          stats.longestTurnEver
-            ? stats.longestTurnEver.entries.map((e) => ({
-                name: displayName(e.name, e.screenName),
-                valueText: formatDuration(stats.longestTurnEver!.durationSeconds),
-              }))
-            : []
-        }
-      />
-      <LongestTurnAvgCard ranks={stats.longestTurnAvg} />
-      <AvgTurnsPerGameCard avgTurnsPerGame={stats.avgTurnsPerGame} />
-      <FunStatCard
-        emoji="⏱️"
-        label="IS IT STILL YOUR TURN?!"
-        explainer="Longest average game"
-        entries={stats.longestAvgGame.map((s) => ({
-          name: displayName(s.name, s.screenName),
-          valueText: formatDuration(s.avgDurationSeconds),
-        }))}
-      />
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center justify-between rounded-xl bg-neutral-800/60 px-3 py-2.5 active:scale-[0.99]"
+      >
+        <span className="text-sm font-bold text-white">
+          {emoji} {title}
+        </span>
+        <span className="text-neutral-400">{expanded ? "▾" : "▸"}</span>
+      </button>
+      {expanded && <div className="flex flex-col gap-2">{children}</div>}
+    </div>
+  );
+}
+
+function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <CollapsibleSection title="Wins & Losses" emoji="🏆">
+        <RankedFunStatCard
+          emoji="💀"
+          label="Professional Loser"
+          ranks={stats.mostLosses.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.entries.map((e) => displayName(e.name, e.screenName)),
+          }))}
+          unitSingular="loss"
+          unitPlural="losses"
+        />
+        <RunnerUpStatsCard runnerUp={stats.runnerUp} />
+        <RankedFunStatCard
+          emoji="🏳️"
+          label="First to Fold"
+          explainer="Most scoops"
+          ranks={stats.mostScoops.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.entries.map((e) => displayName(e.name, e.screenName)),
+          }))}
+          unitSingular="scoop"
+          unitPlural="scoops"
+        />
+        <RankedFunStatCard
+          emoji="🎮"
+          label="Plays the most"
+          ranks={stats.mostGamesPlayed.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.entries.map((e) => displayName(e.name, e.screenName)),
+          }))}
+          unitSingular="game"
+          unitPlural="games"
+        />
+        <FirstPlayerWinRateCard stat={stats.firstPlayerWinRate} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Damage & Eliminations" emoji="⚔️">
+        <RankedFunStatCard
+          emoji="🎯"
+          label="Biggest Target"
+          explainer="Eliminated first most often"
+          ranks={stats.biggestTarget.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.entries.map((e) => displayName(e.name, e.screenName)),
+          }))}
+          unitSingular="game"
+          unitPlural="games"
+          showRankLabel={false}
+        />
+        <RankedFunStatCard
+          emoji="☠️"
+          label="Cause of Death"
+          ranks={stats.eliminationReasons.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.reasons,
+          }))}
+          unitSingular="elimination"
+          unitPlural="eliminations"
+          showRankLabel={false}
+        />
+        <RankedFunStatCard
+          emoji="💀"
+          label="Reaper's Turn"
+          explainer="Most eliminations happening during their turn"
+          ranks={stats.reapersTurn.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.entries.map((e) => displayName(e.name, e.screenName)),
+          }))}
+          unitSingular="elimination"
+          unitPlural="eliminations"
+        />
+        <BiggestHitCard biggestHit={stats.biggestHit} />
+        <BiggestComebackCard comeback={stats.biggestComeback} />
+        <DamageDealtCard totalDamage={stats.totalDamage} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Turns & Pace" emoji="⏱️">
+        <FunStatCard
+          emoji="🕰️"
+          label="Longest Turn Ever"
+          entries={
+            stats.longestTurnEver
+              ? stats.longestTurnEver.entries.map((e) => ({
+                  name: displayName(e.name, e.screenName),
+                  valueText: formatDuration(stats.longestTurnEver!.durationSeconds),
+                }))
+              : []
+          }
+        />
+        <TurnDurationRankCard emoji="🐌" label="Longest Turn On Average" ranks={stats.longestTurnAvg} />
+        <TurnDurationRankCard emoji="⚡" label="Speed Demon" ranks={stats.speedDemon} />
+        <AvgTurnsPerGameCard avgTurnsPerGame={stats.avgTurnsPerGame} />
+        <FunStatCard
+          emoji="⏱️"
+          label="IS IT STILL YOUR TURN?!"
+          explainer="Longest average game"
+          entries={stats.longestAvgGame.map((s) => ({
+            name: displayName(s.name, s.screenName),
+            valueText: formatDuration(s.avgDurationSeconds),
+          }))}
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Decks" emoji="🃏">
+        <RankedFunStatCard
+          emoji="⭐"
+          label="Most played commander"
+          ranks={stats.mostPlayedCommander.map((r) => ({
+            rank: r.rank,
+            count: r.count,
+            names: r.commanders,
+          }))}
+          unitSingular="game"
+          unitPlural="games"
+        />
+      </CollapsibleSection>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-export type EliminationReason = "commanderDamage" | "combatDamage" | "scoop";
+export type EliminationReason = "commanderDamage" | "combatDamage" | "poison" | "scoop";
 
 export type Player = {
   id: string;

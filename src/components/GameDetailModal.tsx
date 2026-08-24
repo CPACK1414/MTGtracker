@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getGameDetail, type GameDetail } from "@/app/actions";
 import PlayByPlayModal from "@/components/PlayByPlayModal";
+import type { EliminationReason } from "@/lib/types";
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
@@ -30,9 +31,10 @@ function ordinal(n: number): string {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 }
 
-function eliminationLabel(reason: "commanderDamage" | "combatDamage" | "scoop" | null): string | null {
+function eliminationLabel(reason: EliminationReason | null): string | null {
   if (reason === "commanderDamage") return "Commander Damage";
   if (reason === "combatDamage") return "Combat Damage";
+  if (reason === "poison") return "Poison";
   if (reason === "scoop") return "Scooped";
   return null;
 }
@@ -132,7 +134,11 @@ export default function GameDetailModal({
                       <span className="tabular-nums text-neutral-300">
                         {formatDuration(p.totalTurnSeconds)}
                       </span>{" "}
-                      ({p.turnsPlayed} turn{p.turnsPlayed === 1 ? "" : "s"})
+                      ({p.turnsPlayed} turn{p.turnsPlayed === 1 ? "" : "s"} · avg{" "}
+                      <span className="tabular-nums text-neutral-300">
+                        {formatDuration(Math.round(p.totalTurnSeconds / p.turnsPlayed))}
+                      </span>
+                      )
                     </p>
                   )}
                 </div>

@@ -9,6 +9,7 @@ import {
   type GamePlayByPlayEntry,
 } from "@/app/actions";
 import LifeChart from "@/components/LifeChart";
+import type { EliminationReason } from "@/lib/types";
 
 function formatElapsed(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -26,9 +27,10 @@ function ordinal(n: number): string {
   return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 }
 
-function eliminationLabel(reason: "commanderDamage" | "combatDamage" | "scoop" | null): string {
+function eliminationLabel(reason: EliminationReason | null): string {
   if (reason === "commanderDamage") return "commander damage";
   if (reason === "combatDamage") return "combat damage";
+  if (reason === "poison") return "poison";
   if (reason === "scoop") return "scooped";
   return "eliminated";
 }

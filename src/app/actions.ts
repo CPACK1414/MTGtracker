@@ -302,10 +302,13 @@ export type FunStats = {
     hits: { type: "commanderDamage" | "combatDamage"; receiver: FunStatEntry }[];
   } | null;
   biggestTarget: FunStatRank[];
-  totalDamage: { commanderDamage: number; combatDamage: number };
+  totalDamage: { commanderDamage: number; combatDamage: number; poisonDamage: number };
   longestTurnEver: { durationSeconds: number; entries: FunStatEntry[] } | null;
   longestTurnAvg: FunStatRank[];
   avgTurnsPerGame: number | null;
+  speedDemon: FunStatRank[];
+  reapersTurn: FunStatRank[];
+  biggestComeback: { minLife: number; entries: FunStatEntry[] } | null;
 };
 
 export type ReportingData = {
@@ -473,6 +476,23 @@ export async function getReportingData(
     }));
   }
 
+  function bottomPlayerRanks(counts: Map<string, number>, topN = 3): FunStatRank[] {
+    const distinctCounts = Array.from(new Set(counts.values()))
+      .filter((c) => c > 0)
+      .sort((a, b) => a - b)
+      .slice(0, topN);
+    return distinctCounts.map((count, i) => ({
+      rank: i + 1,
+      count,
+      entries: Array.from(counts.entries())
+        .filter(([, c]) => c === count)
+        .map(([id]) => {
+          const p = playersById.get(id);
+          return { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null };
+        }),
+    }));
+  }
+
   const scoopCounts = new Map<string, number>();
   const gamesPlayedCounts = new Map<string, number>();
   for (const gp of allParticipants) {
@@ -536,6 +556,7 @@ export async function getReportingData(
   const eliminationReasonLabels: Record<string, string> = {
     commanderDamage: "Commander Damage",
     combatDamage: "Combat Damage",
+    poison: "Poison",
     scoop: "Scoop",
   };
   const eliminationReasonCounts = new Map<string, number>();
@@ -656,7 +677,15 @@ export async function getReportingData(
     (sum, e) => sum + (e.type === "change" && e.lifeDelta && e.lifeDelta < 0 ? -e.lifeDelta : 0),
     0
   );
-  const totalDamage = { commanderDamage: totalCommanderDamage, combatDamage: totalCombatDamage };
+  const totalPoisonDamage = allEvents.reduce(
+    (sum, e) => sum + (e.type === "change" && e.poisonDelta && e.poisonDelta > 0 ? e.poisonDelta : 0),
+    0
+  );
+  const totalDamage = {
+    commanderDamage: totalCommanderDamage,
+    combatDamage: totalCombatDamage,
+    poisonDamage: totalPoisonDamage,
+  };
 
   const turnEndedEvents = allEvents.filter(
     (e) => e.type === "turnEnded" && e.turnDurationSeconds != null
@@ -706,6 +735,98 @@ export async function getReportingData(
       ? gamesWithTurnData.reduce((sum, c) => sum + c, 0) / gamesWithTurnData.length
       : null;
 
+  const speedDemon = bottomPlayerRanks(turnAvgByPlayer, 3);
+
+  const eventsByGameAll = new Map<string, typeof allEvents>();
+  for (const e of allEvents) {
+    const list = eventsByGameAll.get(e.gameId) ?? [];
+    list.push(e);
+    eventsByGameAll.set(e.gameId, list);
+  }
+  const participantsByGameSeated = new Map<string, typeof allParticipants>();
+  for (const p of allParticipants) {
+    const list = participantsByGameSeated.get(p.gameId) ?? [];
+    list.push(p);
+    participantsByGameSeated.set(p.gameId, list);
+  }
+  for (const list of participantsByGameSeated.values()) {
+    list.sort((a, b) => a.seatOrder - b.seatOrder);
+  }
+
+  const reaperCounts = new Map<string, number>();
+  for (const [gameId, gEvents] of eventsByGameAll) {
+    const sorted = [...gEvents].sort((a, b) => a.elapsedSeconds - b.elapsedSeconds);
+    const turnEnds = sorted.filter((e) => e.type === "turnEnded");
+    if (turnEnds.length === 0) continue;
+    const eliminations = sorted.filter((e) => e.type === "eliminated");
+    if (eliminations.length === 0) continue;
+    const seated = participantsByGameSeated.get(gameId) ?? [];
+
+    for (const elim of eliminations) {
+      const owner = turnEnds.find((te) => te.elapsedSeconds >= elim.elapsedSeconds);
+      let holderId: string | null = null;
+      if (owner) {
+        holderId = owner.playerId;
+      } else {
+        const last = turnEnds[turnEnds.length - 1];
+        const idx = seated.findIndex((p) => p.playerId === last.playerId);
+        if (idx !== -1) {
+          for (let step = 1; step <= seated.length; step++) {
+            const candidate = seated[(idx + step) % seated.length];
+            if (!candidate.eliminationReason) {
+              holderId = candidate.playerId;
+              break;
+            }
+          }
+        }
+        if (!holderId) holderId = last.playerId;
+      }
+      if (holderId) {
+        reaperCounts.set(holderId, (reaperCounts.get(holderId) ?? 0) + 1);
+      }
+    }
+  }
+  const reapersTurn = topPlayerRanks(reaperCounts, 3);
+
+  let biggestComeback: { minLife: number; entries: FunStatEntry[] } | null = null;
+  {
+    const minLifeByGame = new Map<string, number>();
+    for (const game of allGames) {
+      if (!game.winnerPlayerId) continue;
+      const winnerEvents = (eventsByGameAll.get(game.id) ?? [])
+        .filter((e) => e.playerId === game.winnerPlayerId && e.type === "change")
+        .sort((a, b) => a.elapsedSeconds - b.elapsedSeconds);
+      let life = STARTING_LIFE;
+      let minLife = STARTING_LIFE;
+      for (const e of winnerEvents) {
+        life += (e.lifeDelta ?? 0) + (e.commanderDamageDelta ?? 0);
+        if (life < minLife) minLife = life;
+      }
+      if (minLife < STARTING_LIFE) {
+        minLifeByGame.set(game.id, minLife);
+      }
+    }
+    if (minLifeByGame.size > 0) {
+      const lowest = Math.min(...minLifeByGame.values());
+      const gamesById = new Map(allGames.map((g) => [g.id, g]));
+      const winnerIds = Array.from(
+        new Set(
+          Array.from(minLifeByGame.entries())
+            .filter(([, ml]) => ml === lowest)
+            .map(([gameId]) => gamesById.get(gameId)?.winnerPlayerId)
+            .filter((x): x is string => Boolean(x))
+        )
+      );
+      biggestComeback = {
+        minLife: lowest,
+        entries: winnerIds.map((playerId) => {
+          const p = playersById.get(playerId);
+          return { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null };
+        }),
+      };
+    }
+  }
+
   const funStats: FunStats = {
     mostScoops: topPlayerRanks(scoopCounts),
     mostLosses: topPlayerRanks(lossCounts),
@@ -721,6 +842,9 @@ export async function getReportingData(
     longestTurnEver,
     longestTurnAvg,
     avgTurnsPerGame,
+    speedDemon,
+    reapersTurn,
+    biggestComeback,
   };
 
   return { players: playerStats, decks: deckStats, deckMatchups, playerMatchups, funStats };
@@ -1076,6 +1200,7 @@ export type GameHistoryEntry = {
   durationSeconds: number | null;
   winnerName: string | null;
   winnerScreenName: string | null;
+  turnCount: number | null;
 };
 
 export async function getGameHistory(
@@ -1095,10 +1220,21 @@ export async function getGameHistory(
   }
 
   const winnerIds = filtered.map((g) => g.winnerPlayerId).filter((x): x is string => Boolean(x));
-  const winnerRows = winnerIds.length
-    ? await db.select().from(players).where(inArray(players.id, winnerIds))
-    : [];
+  const gameIds = filtered.map((g) => g.id);
+  const [winnerRows, turnEndedRows] = await Promise.all([
+    winnerIds.length ? db.select().from(players).where(inArray(players.id, winnerIds)) : [],
+    gameIds.length
+      ? db
+          .select()
+          .from(gameEvents)
+          .where(and(inArray(gameEvents.gameId, gameIds), eq(gameEvents.type, "turnEnded")))
+      : [],
+  ]);
   const winnersById = new Map(winnerRows.map((p) => [p.id, p]));
+  const turnCountByGame = new Map<string, number>();
+  for (const e of turnEndedRows) {
+    turnCountByGame.set(e.gameId, (turnCountByGame.get(e.gameId) ?? 0) + 1);
+  }
 
   return filtered.map((g) => ({
     gameId: g.id,
@@ -1107,5 +1243,6 @@ export async function getGameHistory(
     durationSeconds: g.durationSeconds,
     winnerName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId)?.name ?? null : null,
     winnerScreenName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId)?.screenName ?? null : null,
+    turnCount: turnCountByGame.get(g.id) ?? null,
   }));
 }
