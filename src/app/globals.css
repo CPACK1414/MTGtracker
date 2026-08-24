@@ -13,26 +13,27 @@ body {
 @keyframes turn-color-cycle {
   0% {
     border-color: #34d399;
-    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.7);
+    box-shadow: 0 0 20px 5px rgba(52, 211, 153, 0.95), 0 0 0 2px rgba(52, 211, 153, 0.8);
   }
   25% {
     border-color: #22d3ee;
-    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.7);
+    box-shadow: 0 0 20px 5px rgba(34, 211, 238, 0.95), 0 0 0 2px rgba(34, 211, 238, 0.8);
   }
   50% {
     border-color: #a78bfa;
-    box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.7);
+    box-shadow: 0 0 20px 5px rgba(167, 139, 250, 0.95), 0 0 0 2px rgba(167, 139, 250, 0.8);
   }
   75% {
     border-color: #fbbf24;
-    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 20px 5px rgba(251, 191, 36, 0.95), 0 0 0 2px rgba(251, 191, 36, 0.8);
   }
   100% {
     border-color: #34d399;
-    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.7);
+    box-shadow: 0 0 20px 5px rgba(52, 211, 153, 0.95), 0 0 0 2px rgba(52, 211, 153, 0.8);
   }
 }
 
 .turn-indicator {
-  animation: turn-color-cycle 3.6s ease-in-out infinite;
+  border-width: 2px;
+  animation: turn-color-cycle 2s ease-in-out infinite;
 }
