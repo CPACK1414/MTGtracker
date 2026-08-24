@@ -20,6 +20,7 @@ import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
+import ConfirmModal from "@/components/ConfirmModal";
 import CounterModal from "@/components/CounterModal";
 import EliminationModal from "@/components/EliminationModal";
 import StatsScreen from "@/components/StatsScreen";
@@ -60,6 +61,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     previousTurnStartedAtElapsed: number;
     pushedEvent: GameEventInput;
   } | null>(null);
+  const [hasPassedOnce, setHasPassedOnce] = useState(false);
+  const [showRerollConfirm, setShowRerollConfirm] = useState(false);
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -164,6 +167,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         ? { previousPlayerId: passingPlayerId, previousTurnStartedAtElapsed: turnStartedAtElapsed, pushedEvent: event }
         : null
     );
+    setHasPassedOnce(true);
     const next = nextTurnPlayerId(passingPlayerId);
     setCurrentTurnPlayerId(next);
     setTurnStartedAtElapsed(next ? now : null);
@@ -225,6 +229,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setCurrentTurnPlayerId(null);
     setTurnStartedAtElapsed(null);
     setLastPass(null);
+    setHasPassedOnce(false);
+    setShowRerollConfirm(false);
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
     batchTimeoutRef.current = null;
@@ -258,6 +264,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setCurrentTurnPlayerId(null);
     setTurnStartedAtElapsed(null);
     setLastPass(null);
+    setHasPassedOnce(false);
+    setShowRerollConfirm(false);
     setHomeScreen("welcome");
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
@@ -477,12 +485,14 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         >
           Undo Pass
         </button>
-        <button
-          onClick={() => setShowRandomizer(true)}
-          className="shrink-0 text-sm font-semibold text-emerald-400"
-        >
-          🎲 First
-        </button>
+        {!hasPassedOnce && (
+          <button
+            onClick={() => setShowRerollConfirm(true)}
+            className="shrink-0 text-sm font-semibold text-emerald-400"
+          >
+            🎲 First
+          </button>
+        )}
       </header>
 
       <div
@@ -573,6 +583,19 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           players={players}
           onPicked={setFirstPlayerId}
           onClose={handleRandomizerClose}
+        />
+      )}
+
+      {showRerollConfirm && (
+        <ConfirmModal
+          title="Re-roll first player?"
+          message="This picks a new random first player."
+          confirmLabel="Re-roll"
+          onCancel={() => setShowRerollConfirm(false)}
+          onConfirm={() => {
+            setShowRerollConfirm(false);
+            setShowRandomizer(true);
+          }}
         />
       )}
 
