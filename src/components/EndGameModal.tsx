@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import type { Player } from "@/lib/types";
+import GameTimer from "@/components/GameTimer";
 
 export default function EndGameModal({
   players,
   saving,
   error,
+  gameStartedAt,
   onCancel,
   onConfirm,
 }: {
   players: Player[];
   saving: boolean;
   error: string | null;
+  gameStartedAt: number | null;
   onCancel: () => void;
   onConfirm: (winnerId: string) => void;
 }) {
@@ -28,6 +31,11 @@ export default function EndGameModal({
         <p className="mt-1 text-sm text-neutral-400">
           This saves the game to everyone&apos;s history.
         </p>
+        {gameStartedAt && (
+          <p className="mt-1 text-xs text-neutral-500">
+            Game time: <GameTimer startedAt={gameStartedAt} />
+          </p>
+        )}
 
         <div className="mt-4 flex flex-col gap-2 overflow-y-auto">
           {players.map((p) => (

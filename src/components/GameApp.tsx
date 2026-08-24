@@ -53,6 +53,13 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [counterModalPlayerId, setCounterModalPlayerId] = useState<string | null>(null);
   const [eliminationModalPlayerId, setEliminationModalPlayerId] = useState<string | null>(null);
   const [gameStartedAt, setGameStartedAt] = useState<number | null>(null);
+  const [currentTurnPlayerId, setCurrentTurnPlayerId] = useState<string | null>(null);
+  const [turnStartedAtElapsed, setTurnStartedAtElapsed] = useState<number | null>(null);
+  const [lastPass, setLastPass] = useState<{
+    previousPlayerId: string;
+    previousTurnStartedAtElapsed: number;
+    pushedEvent: GameEventInput;
+  } | null>(null);
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -130,6 +137,60 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     });
   }
 
+  function nextTurnPlayerId(afterId: string): string | null {
+    if (!players) return null;
+    const idx = players.findIndex((p) => p.id === afterId);
+    if (idx === -1) return players.find((p) => !p.eliminated)?.id ?? null;
+    for (let step = 1; step <= players.length; step++) {
+      const candidate = players[(idx + step) % players.length];
+      if (!candidate.eliminated) return candidate.id;
+    }
+    return null;
+  }
+
+  function endCurrentTurnAndAdvance(passingPlayerId: string, undoable: boolean) {
+    if (turnStartedAtElapsed === null) return;
+    const now = elapsedSecondsNow();
+    const duration = Math.max(0, now - turnStartedAtElapsed);
+    const event: GameEventInput = {
+      elapsedSeconds: now,
+      type: "turnEnded",
+      playerId: passingPlayerId,
+      turnDurationSeconds: duration,
+    };
+    eventsRef.current.push(event);
+    setLastPass(
+      undoable
+        ? { previousPlayerId: passingPlayerId, previousTurnStartedAtElapsed: turnStartedAtElapsed, pushedEvent: event }
+        : null
+    );
+    const next = nextTurnPlayerId(passingPlayerId);
+    setCurrentTurnPlayerId(next);
+    setTurnStartedAtElapsed(next ? now : null);
+  }
+
+  function passTurn() {
+    if (!currentTurnPlayerId) return;
+    endCurrentTurnAndAdvance(currentTurnPlayerId, true);
+  }
+
+  function undoPass() {
+    if (!lastPass) return;
+    const idx = eventsRef.current.lastIndexOf(lastPass.pushedEvent);
+    if (idx !== -1) eventsRef.current.splice(idx, 1);
+    setCurrentTurnPlayerId(lastPass.previousPlayerId);
+    setTurnStartedAtElapsed(lastPass.previousTurnStartedAtElapsed);
+    setLastPass(null);
+  }
+
+  function handleRandomizerClose() {
+    setShowRandomizer(false);
+    if (currentTurnPlayerId === null && firstPlayerId) {
+      setCurrentTurnPlayerId(firstPlayerId);
+      setTurnStartedAtElapsed(elapsedSecondsNow());
+    }
+  }
+
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
     if (!players) return map;
@@ -161,6 +222,9 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setRotations(initialRotations);
     setGameStartedAt(Date.now());
     setShowRandomizer(true);
+    setCurrentTurnPlayerId(null);
+    setTurnStartedAtElapsed(null);
+    setLastPass(null);
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
     batchTimeoutRef.current = null;
@@ -191,6 +255,9 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setCounterModalPlayerId(null);
     setEliminationModalPlayerId(null);
     setGameStartedAt(null);
+    setCurrentTurnPlayerId(null);
+    setTurnStartedAtElapsed(null);
+    setLastPass(null);
     setHomeScreen("welcome");
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
@@ -221,6 +288,9 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     // of sitting in the batch window until it happens to flush later.
     flushPendingChanges();
     logInstantEvent(id, "eliminated", reason);
+    if (id === currentTurnPlayerId) {
+      endCurrentTurnAndAdvance(id, false);
+    }
   }
 
   function revivePlayer(id: string) {
@@ -381,17 +451,35 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="grid grid-cols-3 items-center gap-2 border-b border-neutral-800 px-4 py-3">
+      <header className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-3">
         <button
           onClick={() => setShowEndGame(true)}
-          className="justify-self-start text-sm font-semibold text-neutral-400"
+          className="shrink-0 text-sm font-semibold text-neutral-400"
         >
           🏁 End
         </button>
-        {gameStartedAt && <GameTimer startedAt={gameStartedAt} />}
+        <button
+          onClick={passTurn}
+          disabled={!currentTurnPlayerId}
+          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
+        >
+          Pass
+        </button>
+        {gameStartedAt && turnStartedAtElapsed !== null ? (
+          <GameTimer startedAt={gameStartedAt + turnStartedAtElapsed * 1000} />
+        ) : (
+          <span className="text-sm font-semibold tabular-nums text-neutral-600">0:00</span>
+        )}
+        <button
+          onClick={undoPass}
+          disabled={!lastPass}
+          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-neutral-400 active:scale-95 disabled:opacity-30"
+        >
+          Undo Pass
+        </button>
         <button
           onClick={() => setShowRandomizer(true)}
-          className="justify-self-end text-sm font-semibold text-emerald-400"
+          className="shrink-0 text-sm font-semibold text-emerald-400"
         >
           🎲 First
         </button>
@@ -429,6 +517,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
                 opponents={opponents}
                 poison={poison[p.id] ?? 0}
                 radiation={radiation[p.id] ?? 0}
+                isCurrentTurn={p.id === currentTurnPlayerId}
                 onChangeLife={(delta) => changeLife(p.id, delta)}
                 onOpenElimination={() => setEliminationModalPlayerId(p.id)}
                 onRevive={() => revivePlayer(p.id)}
@@ -483,7 +572,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         <FirstPlayerRandomizer
           players={players}
           onPicked={setFirstPlayerId}
-          onClose={() => setShowRandomizer(false)}
+          onClose={handleRandomizerClose}
         />
       )}
 
@@ -492,6 +581,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           players={players}
           saving={saving}
           error={saveError}
+          gameStartedAt={gameStartedAt}
           onCancel={() => {
             setShowEndGame(false);
             setSaveError(null);

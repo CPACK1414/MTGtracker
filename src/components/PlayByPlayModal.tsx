@@ -42,6 +42,12 @@ function describe(
   if (entry.type === "revived") {
     return { text: `${name} revived`, color: "text-emerald-400" };
   }
+  if (entry.type === "turnEnded") {
+    return {
+      text: `${name} ended their turn — ${formatElapsed(entry.turnDurationSeconds ?? 0)}`,
+      color: "text-neutral-400",
+    };
+  }
 
   const parts: string[] = [];
   if (entry.lifeDelta) parts.push(`${entry.lifeDelta > 0 ? "+" : ""}${entry.lifeDelta} life`);

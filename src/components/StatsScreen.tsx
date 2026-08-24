@@ -649,6 +649,58 @@ function DamageDealtCard({ totalDamage }: { totalDamage: ReportingData["funStats
   );
 }
 
+function LongestTurnAvgCard({ ranks }: { ranks: ReportingData["funStats"]["longestTurnAvg"] }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        🐌 Longest Turn On Average
+      </p>
+      {ranks.length === 0 ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {ranks.map((r) => (
+            <div key={r.rank}>
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                {rankLabel(r.rank)}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {r.entries.map((e, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-semibold text-white">
+                      {displayName(e.name, e.screenName)}
+                    </span>
+                    <span className="shrink-0 font-black tabular-nums text-emerald-400">
+                      {formatDuration(r.count)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AvgTurnsPerGameCard({ avgTurnsPerGame }: { avgTurnsPerGame: number | null }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        🔁 Average Turns Per Game
+      </p>
+      {avgTurnsPerGame == null ? (
+        <p className="text-sm text-neutral-600">Not enough data yet</p>
+      ) : (
+        <p className="text-2xl font-black tabular-nums text-emerald-400">
+          {avgTurnsPerGame.toFixed(1)}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
   return (
     <div className="flex flex-col gap-2">
@@ -726,6 +778,20 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
       />
       <BiggestHitCard biggestHit={stats.biggestHit} />
       <DamageDealtCard totalDamage={stats.totalDamage} />
+      <FunStatCard
+        emoji="🕰️"
+        label="Longest Turn Ever"
+        entries={
+          stats.longestTurnEver
+            ? stats.longestTurnEver.entries.map((e) => ({
+                name: displayName(e.name, e.screenName),
+                valueText: formatDuration(stats.longestTurnEver!.durationSeconds),
+              }))
+            : []
+        }
+      />
+      <LongestTurnAvgCard ranks={stats.longestTurnAvg} />
+      <AvgTurnsPerGameCard avgTurnsPerGame={stats.avgTurnsPerGame} />
       <FunStatCard
         emoji="⏱️"
         label="IS IT STILL YOUR TURN?!"

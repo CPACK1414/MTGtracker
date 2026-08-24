@@ -63,6 +63,7 @@ export const gameEvents = pgTable("game_events", {
   poisonDelta: integer("poison_delta"),
   radiationDelta: integer("radiation_delta"),
   eliminationReason: text("elimination_reason"),
+  turnDurationSeconds: integer("turn_duration_seconds"),
 });
 
 export const commanderDamage = pgTable("commander_damage", {

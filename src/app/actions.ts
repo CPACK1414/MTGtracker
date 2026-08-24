@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { commanderDamage, decks, gameEvents, gameParticipants, games, players } from "@/db/schema";
 import { STARTING_LIFE, type EliminationReason } from "@/lib/types";
@@ -144,13 +144,14 @@ export async function deleteDeck(deckId: string): Promise<void> {
 
 export type GameEventInput = {
   elapsedSeconds: number;
-  type: "change" | "eliminated" | "revived";
+  type: "change" | "eliminated" | "revived" | "turnEnded";
   playerId: string;
   lifeDelta?: number;
   commanderDamageDelta?: number;
   poisonDelta?: number;
   radiationDelta?: number;
   eliminationReason?: EliminationReason | null;
+  turnDurationSeconds?: number;
 };
 
 export type SaveGamePayload = {
@@ -223,6 +224,7 @@ export async function saveGame(payload: SaveGamePayload): Promise<{ id: string }
           poisonDelta: e.poisonDelta ?? null,
           radiationDelta: e.radiationDelta ?? null,
           eliminationReason: e.eliminationReason ?? null,
+          turnDurationSeconds: e.turnDurationSeconds ?? null,
         }))
       );
     }
@@ -284,6 +286,9 @@ export type FunStats = {
   } | null;
   biggestTarget: FunStatRank[];
   totalDamage: { commanderDamage: number; combatDamage: number };
+  longestTurnEver: { durationSeconds: number; entries: FunStatEntry[] } | null;
+  longestTurnAvg: FunStatRank[];
+  avgTurnsPerGame: number | null;
 };
 
 export type ReportingData = {
@@ -636,6 +641,54 @@ export async function getReportingData(
   );
   const totalDamage = { commanderDamage: totalCommanderDamage, combatDamage: totalCombatDamage };
 
+  const turnEndedEvents = allEvents.filter(
+    (e) => e.type === "turnEnded" && e.turnDurationSeconds != null
+  );
+
+  let maxTurnDuration = 0;
+  for (const e of turnEndedEvents) {
+    if ((e.turnDurationSeconds ?? 0) > maxTurnDuration) maxTurnDuration = e.turnDurationSeconds ?? 0;
+  }
+  const longestTurnEver =
+    maxTurnDuration > 0
+      ? {
+          durationSeconds: maxTurnDuration,
+          entries: Array.from(
+            new Set(
+              turnEndedEvents
+                .filter((e) => e.turnDurationSeconds === maxTurnDuration)
+                .map((e) => e.playerId)
+            )
+          ).map((playerId) => {
+            const p = playersById.get(playerId);
+            return { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null };
+          }),
+        }
+      : null;
+
+  const turnTotalsByPlayer = new Map<string, { total: number; count: number }>();
+  for (const e of turnEndedEvents) {
+    const stat = turnTotalsByPlayer.get(e.playerId) ?? { total: 0, count: 0 };
+    stat.total += e.turnDurationSeconds ?? 0;
+    stat.count += 1;
+    turnTotalsByPlayer.set(e.playerId, stat);
+  }
+  const turnAvgByPlayer = new Map<string, number>();
+  for (const [playerId, stat] of turnTotalsByPlayer) {
+    turnAvgByPlayer.set(playerId, stat.total / stat.count);
+  }
+  const longestTurnAvg = topPlayerRanks(turnAvgByPlayer, 3);
+
+  const turnCountsByGame = new Map<string, number>();
+  for (const e of turnEndedEvents) {
+    turnCountsByGame.set(e.gameId, (turnCountsByGame.get(e.gameId) ?? 0) + 1);
+  }
+  const gamesWithTurnData = Array.from(turnCountsByGame.values());
+  const avgTurnsPerGame =
+    gamesWithTurnData.length > 0
+      ? gamesWithTurnData.reduce((sum, c) => sum + c, 0) / gamesWithTurnData.length
+      : null;
+
   const funStats: FunStats = {
     mostScoops: topPlayerRanks(scoopCounts),
     mostLosses: topPlayerRanks(lossCounts),
@@ -648,6 +701,9 @@ export async function getReportingData(
     biggestHit,
     biggestTarget,
     totalDamage,
+    longestTurnEver,
+    longestTurnAvg,
+    avgTurnsPerGame,
   };
 
   return { players: playerStats, decks: deckStats, deckMatchups, playerMatchups, funStats };
@@ -714,6 +770,8 @@ export type GameDetailParticipant = {
   finalLife: number | null;
   eliminationReason: EliminationReason | null;
   won: boolean;
+  totalTurnSeconds: number;
+  turnsPlayed: number;
 };
 
 export type GameDetail = {
@@ -746,9 +804,22 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
   const playersById = new Map(playerRows.map((p) => [p.id, p]));
   const decksById = new Map(deckRows.map((d) => [d.id, d]));
 
+  const turnEventRows = await db
+    .select()
+    .from(gameEvents)
+    .where(and(eq(gameEvents.gameId, gameId), eq(gameEvents.type, "turnEnded")));
+  const turnStatsByPlayer = new Map<string, { totalTurnSeconds: number; turnsPlayed: number }>();
+  for (const e of turnEventRows) {
+    const stat = turnStatsByPlayer.get(e.playerId) ?? { totalTurnSeconds: 0, turnsPlayed: 0 };
+    stat.totalTurnSeconds += e.turnDurationSeconds ?? 0;
+    stat.turnsPlayed += 1;
+    turnStatsByPlayer.set(e.playerId, stat);
+  }
+
   const participants: GameDetailParticipant[] = participantRows
     .map((p) => {
       const deck = p.deckId ? decksById.get(p.deckId) : undefined;
+      const turnStat = turnStatsByPlayer.get(p.playerId);
       return {
         playerId: p.playerId,
         playerName: playersById.get(p.playerId)?.name ?? "Unknown",
@@ -759,6 +830,8 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
         finalLife: p.finalLife,
         eliminationReason: p.eliminationReason as EliminationReason | null,
         won: game.winnerPlayerId === p.playerId,
+        totalTurnSeconds: turnStat?.totalTurnSeconds ?? 0,
+        turnsPlayed: turnStat?.turnsPlayed ?? 0,
       };
     })
     .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99));
@@ -779,7 +852,7 @@ export async function getGameDetail(gameId: string): Promise<GameDetail | null> 
 export type GamePlayByPlayEntry = {
   id: string;
   elapsedSeconds: number;
-  type: "change" | "eliminated" | "revived";
+  type: "change" | "eliminated" | "revived" | "turnEnded";
   playerId: string;
   playerName: string;
   playerScreenName: string | null;
@@ -788,6 +861,7 @@ export type GamePlayByPlayEntry = {
   poisonDelta: number | null;
   radiationDelta: number | null;
   eliminationReason: EliminationReason | null;
+  turnDurationSeconds: number | null;
 };
 
 export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayEntry[]> {
@@ -806,7 +880,7 @@ export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayE
   return rows.map((r) => ({
     id: r.id,
     elapsedSeconds: r.elapsedSeconds,
-    type: r.type as "change" | "eliminated" | "revived",
+    type: r.type as "change" | "eliminated" | "revived" | "turnEnded",
     playerId: r.playerId,
     playerName: playersById.get(r.playerId)?.name ?? "Unknown",
     playerScreenName: playersById.get(r.playerId)?.screenName ?? null,
@@ -815,6 +889,7 @@ export async function getGamePlayByPlay(gameId: string): Promise<GamePlayByPlayE
     poisonDelta: r.poisonDelta,
     radiationDelta: r.radiationDelta,
     eliminationReason: r.eliminationReason as EliminationReason | null,
+    turnDurationSeconds: r.turnDurationSeconds,
   }));
 }
 

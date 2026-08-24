@@ -44,6 +44,7 @@ export default function PlayerCard({
   player,
   isLethal,
   isFirst,
+  isCurrentTurn,
   opponents,
   poison,
   radiation,
@@ -56,6 +57,7 @@ export default function PlayerCard({
   player: Player;
   isLethal: boolean;
   isFirst: boolean;
+  isCurrentTurn: boolean;
   opponents: OpponentDamage[];
   poison: number;
   radiation: number;
@@ -81,6 +83,8 @@ export default function PlayerCard({
       className={`relative flex h-full w-full flex-col rounded-2xl border bg-cover bg-center p-2 transition-opacity ${
         player.eliminated
           ? "border-neutral-800 bg-neutral-900/50 opacity-50"
+          : isCurrentTurn
+          ? "border-emerald-400 bg-neutral-900 ring-2 ring-emerald-400/70"
           : "border-neutral-800 bg-neutral-900"
       }`}
       style={
@@ -130,11 +134,16 @@ export default function PlayerCard({
       )}
 
       <div className="mb-1 flex items-center justify-between gap-2">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-1.5">
           <p className="truncate text-base font-semibold text-neutral-300">
             {player.name}
             {isFirst && <span className="ml-1">🎲</span>}
           </p>
+          {isCurrentTurn && !player.eliminated && (
+            <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-400">
+              Turn
+            </span>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button

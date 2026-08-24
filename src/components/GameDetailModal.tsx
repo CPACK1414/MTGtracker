@@ -125,6 +125,15 @@ export default function GameDetailModal({
                       {p.finalLife ?? "—"}
                     </span>
                   </p>
+                  {p.turnsPlayed > 0 && (
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      Turn time:{" "}
+                      <span className="tabular-nums text-neutral-300">
+                        {formatDuration(p.totalTurnSeconds)}
+                      </span>{" "}
+                      ({p.turnsPlayed} turn{p.turnsPlayed === 1 ? "" : "s"})
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
