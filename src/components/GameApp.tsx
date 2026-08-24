@@ -458,7 +458,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const layoutTemplate = getLayoutTemplate(players.length);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-3">
         <button
           onClick={() => setShowEndGame(true)}

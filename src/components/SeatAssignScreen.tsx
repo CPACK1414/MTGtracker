@@ -50,7 +50,7 @@ export default function SeatAssignScreen({
   }
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
         <button onClick={onBack} className="text-sm font-semibold text-neutral-400">
           ← Back

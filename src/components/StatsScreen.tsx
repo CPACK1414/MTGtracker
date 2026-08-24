@@ -88,7 +88,7 @@ export default function StatsScreen({ onBack }: { onBack: () => void }) {
   }, [podSizeFilter, dateRange, timeRange]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
         <button onClick={onBack} className="text-sm font-semibold text-neutral-400">
           ← Back
@@ -754,15 +754,17 @@ function CollapsibleSection({
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="flex flex-col gap-2">
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center justify-between rounded-xl bg-neutral-800/60 px-3 py-2.5 active:scale-[0.99]"
-      >
-        <span className="text-sm font-bold text-white">
-          {emoji} {title}
-        </span>
-        <span className="text-neutral-400">{expanded ? "▾" : "▸"}</span>
-      </button>
+      <div className="sticky top-0 z-10 bg-neutral-950 py-1">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-between rounded-xl bg-neutral-800/90 px-3 py-2.5 active:scale-[0.99]"
+        >
+          <span className="text-sm font-bold text-white">
+            {emoji} {title}
+          </span>
+          <span className="text-neutral-400">{expanded ? "▾" : "▸"}</span>
+        </button>
+      </div>
       {expanded && <div className="flex flex-col gap-2">{children}</div>}
     </div>
   );
