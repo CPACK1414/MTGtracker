@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 const HOLD_DELAY_MS = 450;
-const HOLD_INTERVAL_MS = 500;
+const HOLD_INTERVAL_MS = 600;
 
 export function useHoldRepeat() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -26,6 +26,7 @@ export function useHoldRepeat() {
     repeatingRef.current = false;
     timeoutRef.current = setTimeout(() => {
       repeatingRef.current = true;
+      onRepeat();
       intervalRef.current = setInterval(onRepeat, HOLD_INTERVAL_MS);
     }, HOLD_DELAY_MS);
   }
