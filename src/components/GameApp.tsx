@@ -467,11 +467,11 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           🏁 End
         </button>
         <button
-          onClick={passTurn}
-          disabled={!currentTurnPlayerId}
-          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
+          onClick={undoPass}
+          disabled={!lastPass}
+          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-neutral-400 active:scale-95 disabled:opacity-30"
         >
-          Pass
+          Undo Pass
         </button>
         {gameStartedAt && turnStartedAtElapsed !== null ? (
           <GameTimer startedAt={gameStartedAt + turnStartedAtElapsed * 1000} />
@@ -479,20 +479,23 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           <span className="text-sm font-semibold tabular-nums text-neutral-600">0:00</span>
         )}
         <button
-          onClick={undoPass}
-          disabled={!lastPass}
-          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-neutral-400 active:scale-95 disabled:opacity-30"
+          onClick={passTurn}
+          disabled={!currentTurnPlayerId}
+          className="shrink-0 rounded-full bg-neutral-800 px-3 py-1.5 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
         >
-          Undo Pass
+          ⏭️ Pass ⏭️
         </button>
-        {!hasPassedOnce && (
-          <button
-            onClick={() => setShowRerollConfirm(true)}
-            className="shrink-0 text-sm font-semibold text-emerald-400"
-          >
-            🎲 First
-          </button>
-        )}
+        <div className="flex w-8 shrink-0 items-center justify-end">
+          {!hasPassedOnce && (
+            <button
+              onClick={() => setShowRerollConfirm(true)}
+              aria-label="Re-roll first player"
+              className="text-lg leading-none"
+            >
+              🎲
+            </button>
+          )}
+        </div>
       </header>
 
       <div
