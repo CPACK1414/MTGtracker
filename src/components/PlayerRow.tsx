@@ -14,7 +14,7 @@ export default function PlayerRow({
   onRemoveDeck,
 }: {
   player: PlayerProfile;
-  onRename: (name: string, screenName: string | null) => Promise<void>;
+  onRename: (name: string, screenName: string | null, email: string | null) => Promise<void>;
   onDelete: () => void;
   onAddDeck: (name: string, commander: string, colors: string, artCropUrl: string | null) => void;
   onEditDeck: (
@@ -31,6 +31,7 @@ export default function PlayerRow({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [draftName, setDraftName] = useState(player.name);
   const [draftScreenName, setDraftScreenName] = useState(player.screenName ?? "");
+  const [draftEmail, setDraftEmail] = useState(player.email ?? "");
   const [renameError, setRenameError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [addingDeck, setAddingDeck] = useState(false);
@@ -39,6 +40,7 @@ export default function PlayerRow({
   function startRenaming() {
     setDraftName(player.name);
     setDraftScreenName(player.screenName ?? "");
+    setDraftEmail(player.email ?? "");
     setRenameError(null);
     setRenaming(true);
   }
@@ -47,7 +49,11 @@ export default function PlayerRow({
     setSaving(true);
     setRenameError(null);
     try {
-      await onRename(draftName.trim() || player.name, draftScreenName.trim() || null);
+      await onRename(
+        draftName.trim() || player.name,
+        draftScreenName.trim() || null,
+        draftEmail.trim() || null
+      );
       setRenaming(false);
     } catch (e) {
       setRenameError(e instanceof Error ? e.message : "Couldn't save changes.");
@@ -71,6 +77,13 @@ export default function PlayerRow({
             value={draftScreenName}
             onChange={(e) => setDraftScreenName(e.target.value)}
             placeholder="Screen Name (shown in game)"
+            className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+          />
+          <input
+            type="email"
+            value={draftEmail}
+            onChange={(e) => setDraftEmail(e.target.value)}
+            placeholder="Email (for daily recaps)"
             className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
           />
           {renameError && <p className="text-xs text-red-400">{renameError}</p>}
@@ -143,6 +156,11 @@ export default function PlayerRow({
             <p className="text-right text-xs text-neutral-500">
               This player has no game history — nothing else will be deleted.
             </p>
+          )}
+          {!player.email && (
+            <button onClick={startRenaming} className="text-left text-xs text-amber-500">
+              No email — won&apos;t get daily recaps. Tap to add one.
+            </button>
           )}
         </div>
       )}

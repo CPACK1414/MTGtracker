@@ -24,6 +24,7 @@ export default function PlayerLibraryScreen({
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [newName, setNewName] = useState("");
   const [newScreenName, setNewScreenName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -40,16 +41,18 @@ export default function PlayerLibraryScreen({
 
   async function addPlayer() {
     const name = newName.trim();
-    if (!name) return;
+    const email = newEmail.trim();
+    if (!name || !email) return;
     const nameLower = name.toLowerCase();
     if (players.some((p) => p.name.toLowerCase() === nameLower)) {
       setError(`A player named "${name}" already exists.`);
       return;
     }
     try {
-      const created = await createPlayer(name, newScreenName.trim() || null);
+      const created = await createPlayer(name, newScreenName.trim() || null, email);
       setNewName("");
       setNewScreenName("");
+      setNewEmail("");
       setAddingPlayer(false);
       setError(null);
       onChangePlayers((prev) => [...prev, created]);
@@ -67,9 +70,16 @@ export default function PlayerLibraryScreen({
     }
   }
 
-  async function handleRename(id: string, name: string, screenName: string | null): Promise<void> {
-    await renamePlayer(id, name, screenName);
-    onChangePlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name, screenName } : p)));
+  async function handleRename(
+    id: string,
+    name: string,
+    screenName: string | null,
+    email: string | null
+  ): Promise<void> {
+    await renamePlayer(id, name, screenName, email);
+    onChangePlayers((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, name, screenName, email } : p))
+    );
   }
 
   async function addDeck(
@@ -177,7 +187,7 @@ export default function PlayerLibraryScreen({
             <PlayerRow
               key={p.id}
               player={p}
-              onRename={(name, screenName) => handleRename(p.id, name, screenName)}
+              onRename={(name, screenName, email) => handleRename(p.id, name, screenName, email)}
               onDelete={() => removePlayer(p.id)}
               onAddDeck={(name, commander, colors, artCropUrl) =>
                 addDeck(p.id, name, commander, colors, artCropUrl)
@@ -207,12 +217,21 @@ export default function PlayerLibraryScreen({
               placeholder="Screen Name (shown in game)"
               className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
             />
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addPlayer()}
+              placeholder="Email (required for daily recaps)"
+              className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+            />
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setAddingPlayer(false);
                   setNewName("");
                   setNewScreenName("");
+                  setNewEmail("");
                 }}
                 className="flex-1 rounded-lg bg-neutral-700 py-2 text-sm font-semibold text-neutral-300 active:scale-95"
               >
@@ -220,7 +239,7 @@ export default function PlayerLibraryScreen({
               </button>
               <button
                 onClick={addPlayer}
-                disabled={!newName.trim()}
+                disabled={!newName.trim() || !newEmail.trim()}
                 className="flex-1 rounded-lg bg-indigo-500 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-50"
               >
                 Add

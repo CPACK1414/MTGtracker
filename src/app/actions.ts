@@ -67,14 +67,23 @@ export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
   }));
 }
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function createPlayer(
   name: string,
-  screenName?: string | null
+  screenName: string | null,
+  email: string
 ): Promise<PlayerProfile> {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
+    throw new Error("Enter a valid email address.");
+  }
   await ensureUniqueNames(name, screenName ?? null);
   const [player] = await db
     .insert(players)
-    .values({ name, screenName: screenName?.trim() || null })
+    .values({ name, screenName: screenName?.trim() || null, email: trimmedEmail })
     .returning();
   return { ...player, decks: [], gamesPlayed: 0 };
 }
@@ -82,10 +91,18 @@ export async function createPlayer(
 export async function renamePlayer(
   id: string,
   name: string,
-  screenName: string | null
+  screenName: string | null,
+  email: string | null
 ): Promise<void> {
+  const trimmedEmail = email?.trim() || null;
+  if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+    throw new Error("Enter a valid email address.");
+  }
   await ensureUniqueNames(name, screenName, id);
-  await db.update(players).set({ name, screenName }).where(eq(players.id, id));
+  await db
+    .update(players)
+    .set({ name, screenName, email: trimmedEmail })
+    .where(eq(players.id, id));
 }
 
 export async function deletePlayer(id: string): Promise<void> {

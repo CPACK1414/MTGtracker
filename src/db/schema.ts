@@ -1,9 +1,10 @@
-import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const players = pgTable("players", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   screenName: text("screen_name"),
+  email: text("email"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -65,6 +66,19 @@ export const gameEvents = pgTable("game_events", {
   eliminationReason: text("elimination_reason"),
   turnDurationSeconds: integer("turn_duration_seconds"),
 });
+
+export const dailyRecapSent = pgTable(
+  "daily_recap_sent",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    summaryDate: text("summary_date").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("daily_recap_sent_player_date_idx").on(table.playerId, table.summaryDate)]
+);
 
 export const commanderDamage = pgTable("commander_damage", {
   id: uuid("id").primaryKey().defaultRandom(),
