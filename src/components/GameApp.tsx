@@ -59,9 +59,11 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [lastPass, setLastPass] = useState<{
     previousPlayerId: string;
     previousTurnStartedAtElapsed: number;
+    previousRoundNumber: number;
     pushedEvent: GameEventInput;
   } | null>(null);
   const [hasPassedOnce, setHasPassedOnce] = useState(false);
+  const [roundNumber, setRoundNumber] = useState(1);
   const [showRerollConfirm, setShowRerollConfirm] = useState(false);
 
   const eventsRef = useRef<GameEventInput[]>([]);
@@ -164,11 +166,19 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     eventsRef.current.push(event);
     setLastPass(
       undoable
-        ? { previousPlayerId: passingPlayerId, previousTurnStartedAtElapsed: turnStartedAtElapsed, pushedEvent: event }
+        ? {
+            previousPlayerId: passingPlayerId,
+            previousTurnStartedAtElapsed: turnStartedAtElapsed,
+            previousRoundNumber: roundNumber,
+            pushedEvent: event,
+          }
         : null
     );
     setHasPassedOnce(true);
     const next = nextTurnPlayerId(passingPlayerId);
+    if (next && next === firstPlayerId) {
+      setRoundNumber((n) => n + 1);
+    }
     setCurrentTurnPlayerId(next);
     setTurnStartedAtElapsed(next ? now : null);
   }
@@ -184,6 +194,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     if (idx !== -1) eventsRef.current.splice(idx, 1);
     setCurrentTurnPlayerId(lastPass.previousPlayerId);
     setTurnStartedAtElapsed(lastPass.previousTurnStartedAtElapsed);
+    setRoundNumber(lastPass.previousRoundNumber);
     setLastPass(null);
   }
 
@@ -230,6 +241,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setTurnStartedAtElapsed(null);
     setLastPass(null);
     setHasPassedOnce(false);
+    setRoundNumber(1);
     setShowRerollConfirm(false);
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
@@ -265,6 +277,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setTurnStartedAtElapsed(null);
     setLastPass(null);
     setHasPassedOnce(false);
+    setRoundNumber(1);
     setShowRerollConfirm(false);
     setHomeScreen("welcome");
 
@@ -485,8 +498,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         >
           ⏭️ Pass ⏭️
         </button>
-        <div className="flex w-8 shrink-0 items-center justify-end">
-          {!hasPassedOnce && (
+        <div className="flex min-w-8 shrink-0 items-center justify-end">
+          {!hasPassedOnce ? (
             <button
               onClick={() => setShowRerollConfirm(true)}
               aria-label="Re-roll first player"
@@ -494,6 +507,10 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
             >
               🎲
             </button>
+          ) : (
+            <span className="text-sm font-semibold tabular-nums text-neutral-400">
+              Turn {roundNumber}
+            </span>
           )}
         </div>
       </header>
