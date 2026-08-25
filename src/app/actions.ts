@@ -321,6 +321,53 @@ export type ReportingData = {
 
 export type DateRange = { from: string; to: string };
 
+// Counts trips around the table (rounds), not individual player turns —
+// mirrors the live "Turn N" round counter: it starts at 1 and increments
+// each time the turn order wraps back around to whoever went first.
+// Elimination state is tracked live, in chronological order, since a player
+// eliminated partway through the game was still in the rotation for earlier
+// turns.
+function computeRoundCounts(
+  gamesList: { id: string; firstPlayerId: string | null }[],
+  eventsByGame: Map<string, { type: string; playerId: string; elapsedSeconds: number }[]>,
+  participantsByGame: Map<string, { playerId: string; seatOrder: number }[]>
+): Map<string, number> {
+  const roundCountByGame = new Map<string, number>();
+  for (const game of gamesList) {
+    if (!game.firstPlayerId) continue;
+    const gEvents = eventsByGame.get(game.id);
+    if (!gEvents) continue;
+    const sorted = [...gEvents].sort((a, b) => a.elapsedSeconds - b.elapsedSeconds);
+    if (!sorted.some((e) => e.type === "turnEnded")) continue;
+    const seatOrder = (participantsByGame.get(game.id) ?? [])
+      .slice()
+      .sort((a, b) => a.seatOrder - b.seatOrder)
+      .map((p) => p.playerId);
+
+    const eliminatedLive = new Set<string>();
+    let rounds = 1;
+    for (const e of sorted) {
+      if (e.type === "eliminated") {
+        eliminatedLive.add(e.playerId);
+      } else if (e.type === "revived") {
+        eliminatedLive.delete(e.playerId);
+      } else if (e.type === "turnEnded") {
+        const idx = seatOrder.indexOf(e.playerId);
+        if (idx === -1) continue;
+        for (let step = 1; step <= seatOrder.length; step++) {
+          const candidateId = seatOrder[(idx + step) % seatOrder.length];
+          if (!eliminatedLive.has(candidateId)) {
+            if (candidateId === game.firstPlayerId) rounds++;
+            break;
+          }
+        }
+      }
+    }
+    roundCountByGame.set(game.id, rounds);
+  }
+  return roundCountByGame;
+}
+
 export async function getReportingData(
   podSize?: number | null,
   dateRange?: DateRange | null
@@ -743,41 +790,7 @@ export async function getReportingData(
     list.sort((a, b) => a.seatOrder - b.seatOrder);
   }
 
-  // "Average Turns Per Game" counts trips around the table (rounds), not
-  // individual player turns — mirrors the live "Turn N" round counter: it
-  // starts at 1 and increments each time the turn order wraps back around
-  // to whoever went first. Elimination state is tracked live, in
-  // chronological order, since a player eliminated partway through the game
-  // was still in the rotation for earlier turns.
-  const roundCountByGame = new Map<string, number>();
-  for (const [gameId, gEvents] of eventsByGameAll) {
-    const game = allGames.find((g) => g.id === gameId);
-    if (!game || !game.firstPlayerId) continue;
-    const sorted = [...gEvents].sort((a, b) => a.elapsedSeconds - b.elapsedSeconds);
-    if (!sorted.some((e) => e.type === "turnEnded")) continue;
-    const seatOrder = (participantsByGameSeated.get(gameId) ?? []).map((p) => p.playerId);
-
-    const eliminatedLive = new Set<string>();
-    let rounds = 1;
-    for (const e of sorted) {
-      if (e.type === "eliminated") {
-        eliminatedLive.add(e.playerId);
-      } else if (e.type === "revived") {
-        eliminatedLive.delete(e.playerId);
-      } else if (e.type === "turnEnded") {
-        const idx = seatOrder.indexOf(e.playerId);
-        if (idx === -1) continue;
-        for (let step = 1; step <= seatOrder.length; step++) {
-          const candidateId = seatOrder[(idx + step) % seatOrder.length];
-          if (!eliminatedLive.has(candidateId)) {
-            if (candidateId === game.firstPlayerId) rounds++;
-            break;
-          }
-        }
-      }
-    }
-    roundCountByGame.set(gameId, rounds);
-  }
+  const roundCountByGame = computeRoundCounts(allGames, eventsByGameAll, participantsByGameSeated);
   const gamesWithRoundData = Array.from(roundCountByGame.values());
   const avgTurnsPerGame =
     gamesWithRoundData.length > 0
@@ -1252,20 +1265,38 @@ export async function getGameHistory(
 
   const winnerIds = filtered.map((g) => g.winnerPlayerId).filter((x): x is string => Boolean(x));
   const gameIds = filtered.map((g) => g.id);
-  const [winnerRows, turnEndedRows] = await Promise.all([
+  const [winnerRows, roundEvents, roundParticipants] = await Promise.all([
     winnerIds.length ? db.select().from(players).where(inArray(players.id, winnerIds)) : [],
     gameIds.length
       ? db
           .select()
           .from(gameEvents)
-          .where(and(inArray(gameEvents.gameId, gameIds), eq(gameEvents.type, "turnEnded")))
+          .where(
+            and(
+              inArray(gameEvents.gameId, gameIds),
+              inArray(gameEvents.type, ["turnEnded", "eliminated", "revived"])
+            )
+          )
+      : [],
+    gameIds.length
+      ? db.select().from(gameParticipants).where(inArray(gameParticipants.gameId, gameIds))
       : [],
   ]);
   const winnersById = new Map(winnerRows.map((p) => [p.id, p]));
-  const turnCountByGame = new Map<string, number>();
-  for (const e of turnEndedRows) {
-    turnCountByGame.set(e.gameId, (turnCountByGame.get(e.gameId) ?? 0) + 1);
+
+  const eventsByGame = new Map<string, typeof roundEvents>();
+  for (const e of roundEvents) {
+    const list = eventsByGame.get(e.gameId) ?? [];
+    list.push(e);
+    eventsByGame.set(e.gameId, list);
   }
+  const participantsByGame = new Map<string, typeof roundParticipants>();
+  for (const p of roundParticipants) {
+    const list = participantsByGame.get(p.gameId) ?? [];
+    list.push(p);
+    participantsByGame.set(p.gameId, list);
+  }
+  const roundCountByGame = computeRoundCounts(filtered, eventsByGame, participantsByGame);
 
   return filtered.map((g) => ({
     gameId: g.id,
@@ -1274,6 +1305,6 @@ export async function getGameHistory(
     durationSeconds: g.durationSeconds,
     winnerName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId)?.name ?? null : null,
     winnerScreenName: g.winnerPlayerId ? winnersById.get(g.winnerPlayerId)?.screenName ?? null : null,
-    turnCount: turnCountByGame.get(g.id) ?? null,
+    turnCount: roundCountByGame.get(g.id) ?? null,
   }));
 }
