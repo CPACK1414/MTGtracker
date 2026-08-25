@@ -13,7 +13,7 @@ import {
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
 import { saveGame, type GameEventInput } from "@/app/actions";
-import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layout";
+import { getLayoutTemplate, getValidRotations, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
@@ -240,7 +240,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     return map;
   }, [players, damage]);
 
-  function startGame(selections: PodSelection[]) {
+  function startGame(selections: PodSelection[], customRotations?: Rotation[]) {
     const newPlayers = makePlayers(selections);
     setPlayers(newPlayers);
     setDamage(makeEmptyDamage(newPlayers));
@@ -252,7 +252,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     const template = getLayoutTemplate(newPlayers.length);
     const initialRotations: Record<string, Rotation> = {};
     newPlayers.forEach((p, i) => {
-      initialRotations[p.id] = template.placements[i]?.rotation ?? 0;
+      initialRotations[p.id] = customRotations?.[i] ?? template.placements[i]?.rotation ?? 0;
     });
     setRotations(initialRotations);
     setGameStartedAt(Date.now());
@@ -303,9 +303,14 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   function rotatePlayer(id: string) {
+    if (!players) return;
+    const idx = players.findIndex((p) => p.id === id);
+    const area = idx !== -1 ? getLayoutTemplate(players.length).placements[idx]?.area : undefined;
+    const validRotations = area ? getValidRotations(players.length, area) : ([0, 90, 180, 270] as Rotation[]);
     setRotations((prev) => {
       const current = prev[id] ?? 0;
-      const next = ((current + 90) % 360) as Rotation;
+      const currentIdx = validRotations.indexOf(current);
+      const next = validRotations[(currentIdx + 1) % validRotations.length];
       return { ...prev, [id]: next };
     });
   }
@@ -662,7 +667,12 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       )}
 
       {showReadyUp && (
-        <ReadyUpScreen players={players} readyPlayerIds={readyPlayerIds} onReady={markReady} />
+        <ReadyUpScreen
+          players={players}
+          readyPlayerIds={readyPlayerIds}
+          rotations={rotations}
+          onReady={markReady}
+        />
       )}
 
       {showRerollConfirm && (

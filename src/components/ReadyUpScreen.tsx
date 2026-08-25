@@ -1,16 +1,18 @@
 "use client";
 
 import RotatableCard from "@/components/RotatableCard";
-import { getLayoutTemplate, gridTemplateAreas } from "@/lib/layout";
+import { getLayoutTemplate, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import type { Player } from "@/lib/types";
 
 export default function ReadyUpScreen({
   players,
   readyPlayerIds,
+  rotations,
   onReady,
 }: {
   players: Player[];
   readyPlayerIds: Set<string>;
+  rotations: Record<string, Rotation>;
   onReady: (id: string) => void;
 }) {
   const layoutTemplate = getLayoutTemplate(players.length);
@@ -37,7 +39,7 @@ export default function ReadyUpScreen({
           return (
             <RotatableCard
               key={p.id}
-              rotation={placement?.rotation ?? 0}
+              rotation={rotations[p.id] ?? placement?.rotation ?? 0}
               style={{ gridArea: placement?.area }}
             >
               <div

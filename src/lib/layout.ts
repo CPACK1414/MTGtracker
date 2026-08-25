@@ -93,3 +93,28 @@ function buildFallbackGrid(count: number): LayoutTemplate {
 export function gridTemplateAreas(template: LayoutTemplate): string {
   return template.areas.map((row) => `"${row}"`).join(" ");
 }
+
+// Rotations a card is allowed to cycle through via the manual rotate button,
+// excluding whichever orientation would face the shared edge with a
+// neighboring card (i.e. into the middle of the board).
+const VALID_ROTATIONS: Record<number, Record<string, Rotation[]>> = {
+  2: {
+    bottom: [0, 90, 270],
+    top: [90, 180, 270],
+  },
+  3: {
+    bottom: [0, 90, 270],
+    "top-left": [90, 180],
+    "top-right": [180, 270],
+  },
+  4: {
+    "top-left": [90, 180],
+    "top-right": [180, 270],
+    "bottom-left": [0, 90],
+    "bottom-right": [0, 270],
+  },
+};
+
+export function getValidRotations(count: number, area: string): Rotation[] {
+  return VALID_ROTATIONS[count]?.[area] ?? [0, 90, 180, 270];
+}

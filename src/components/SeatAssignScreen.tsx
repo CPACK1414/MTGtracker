@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getLayoutTemplate, gridTemplateAreas } from "@/lib/layout";
+import { getLayoutTemplate, getValidRotations, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import type { PodSelection } from "@/lib/types";
 import RotatableCard from "@/components/RotatableCard";
 
@@ -12,13 +12,28 @@ export default function SeatAssignScreen({
 }: {
   selections: PodSelection[];
   onBack: () => void;
-  onStart: (ordered: PodSelection[]) => void;
+  onStart: (ordered: PodSelection[], rotations: Rotation[]) => void;
 }) {
   const template = getLayoutTemplate(selections.length);
   const [seatPlayerIds, setSeatPlayerIds] = useState<(string | null)[]>(() =>
     selections.map(() => null)
   );
+  const [rotations, setRotations] = useState<Rotation[]>(() =>
+    template.placements.map((p) => p.rotation)
+  );
   const sortedSelections = [...selections].sort((a, b) => a.name.localeCompare(b.name));
+
+  function rotateSeat(seatIndex: number) {
+    const area = template.placements[seatIndex]?.area;
+    if (!area) return;
+    const validRotations = getValidRotations(selections.length, area);
+    setRotations((prev) => {
+      const next = [...prev];
+      const currentIdx = validRotations.indexOf(next[seatIndex]);
+      next[seatIndex] = validRotations[(currentIdx + 1) % validRotations.length];
+      return next;
+    });
+  }
 
   function assign(seatIndex: number, profileId: string) {
     setSeatPlayerIds((prev) => {
@@ -46,7 +61,7 @@ export default function SeatAssignScreen({
   function handleStart() {
     if (!allSeated) return;
     const ordered = seatPlayerIds.map((id) => selections.find((s) => s.profileId === id)!);
-    onStart(ordered);
+    onStart(ordered, rotations);
   }
 
   return (
@@ -85,7 +100,7 @@ export default function SeatAssignScreen({
             >
               {artUrl && (
                 <div className="absolute inset-0">
-                  <RotatableCard rotation={placement.rotation} style={{ width: "100%", height: "100%" }}>
+                  <RotatableCard rotation={rotations[i]} style={{ width: "100%", height: "100%" }}>
                     <div
                       className="h-full w-full"
                       style={{
@@ -97,12 +112,24 @@ export default function SeatAssignScreen({
                   </RotatableCard>
                 </div>
               )}
-              <span
-                className="relative z-10 text-xl text-neutral-500"
-                style={{ display: "inline-block", transform: `rotate(${(placement.rotation + 180) % 360}deg)` }}
-              >
-                ▲
-              </span>
+              <div className="relative z-10 flex items-center gap-2">
+                <span
+                  className="text-xl text-neutral-500"
+                  style={{
+                    display: "inline-block",
+                    transform: `rotate(${(rotations[i] + 180) % 360}deg)`,
+                  }}
+                >
+                  ▲
+                </span>
+                <button
+                  onClick={() => rotateSeat(i)}
+                  aria-label="Rotate this seat's card"
+                  className="rounded-full bg-neutral-900 px-2 py-1.5 text-sm text-neutral-300 active:scale-90"
+                >
+                  ⟳
+                </button>
+              </div>
               <div className="relative z-10 flex w-full items-center gap-1">
                 <select
                   value={seatPlayerIds[i] ?? ""}

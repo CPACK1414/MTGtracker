@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PlayerProfile } from "@/lib/library";
 import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
+import type { Rotation } from "@/lib/layout";
 import { createDeck } from "@/app/actions";
 import PodPlayerRow from "@/components/PodPlayerRow";
 import SeatAssignScreen from "@/components/SeatAssignScreen";
@@ -18,7 +19,7 @@ export default function PodSetupScreen({
   onChangePlayers: (updater: (prev: PlayerProfile[]) => PlayerProfile[]) => void;
   onBack: () => void;
   onManagePlayers: () => void;
-  onStart: (selections: PodSelection[]) => void;
+  onStart: (selections: PodSelection[], rotations: Rotation[]) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
