@@ -25,6 +25,7 @@ export default function PodPlayerRow({
   ) => Promise<void>;
 }) {
   const [addingDeck, setAddingDeck] = useState(false);
+  const ADD_NEW = "__add_new__";
 
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900">
@@ -53,15 +54,23 @@ export default function PodPlayerRow({
 
       {selected && (
         <div className="flex flex-col gap-2 px-3 pb-3">
-          {player.decks.length === 0 && !addingDeck && (
-            <p className="rounded-lg bg-neutral-800/60 px-3 py-2 text-xs text-neutral-400">
-              No decks yet for {player.name}.
-            </p>
-          )}
-          {player.decks.length > 0 && (
+          {addingDeck ? (
+            <DeckForm
+              onCancel={() => setAddingDeck(false)}
+              onSave={(name, commander, colors, artCropUrl) => {
+                onAddDeck(name, commander, colors, artCropUrl).then(() => setAddingDeck(false));
+              }}
+            />
+          ) : (
             <select
               value={deckId ?? ""}
-              onChange={(e) => onSelectDeck(e.target.value || null)}
+              onChange={(e) => {
+                if (e.target.value === ADD_NEW) {
+                  setAddingDeck(true);
+                  return;
+                }
+                onSelectDeck(e.target.value || null);
+              }}
               className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none"
             >
               <option value="" disabled>
@@ -72,23 +81,8 @@ export default function PodPlayerRow({
                   {d.name}
                 </option>
               ))}
+              <option value={ADD_NEW}>+ Add Deck</option>
             </select>
-          )}
-
-          {addingDeck ? (
-            <DeckForm
-              onCancel={() => setAddingDeck(false)}
-              onSave={(name, commander, colors, artCropUrl) => {
-                onAddDeck(name, commander, colors, artCropUrl).then(() => setAddingDeck(false));
-              }}
-            />
-          ) : (
-            <button
-              onClick={() => setAddingDeck(true)}
-              className="rounded-lg border border-dashed border-neutral-700 py-2 text-sm font-semibold text-neutral-400 active:scale-95"
-            >
-              + Add Deck
-            </button>
           )}
         </div>
       )}
