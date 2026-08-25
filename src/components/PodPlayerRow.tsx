@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { PlayerProfile } from "@/lib/library";
+import DeckForm from "@/components/DeckForm";
 
 export default function PodPlayerRow({
   player,
@@ -8,13 +10,22 @@ export default function PodPlayerRow({
   deckId,
   onToggleSelect,
   onSelectDeck,
+  onAddDeck,
 }: {
   player: PlayerProfile;
   selected: boolean;
   deckId: string | null;
   onToggleSelect: () => void;
   onSelectDeck: (deckId: string | null) => void;
+  onAddDeck: (
+    name: string,
+    commander: string,
+    colors: string,
+    artCropUrl: string | null
+  ) => Promise<void>;
 }) {
+  const [addingDeck, setAddingDeck] = useState(false);
+
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900">
       <button
@@ -41,12 +52,13 @@ export default function PodPlayerRow({
       </button>
 
       {selected && (
-        <div className="px-3 pb-3">
-          {player.decks.length === 0 ? (
-            <p className="rounded-lg bg-red-950 px-3 py-2 text-xs text-red-300">
-              No decks yet — add one for {player.name} in Players &amp; Decks first.
+        <div className="flex flex-col gap-2 px-3 pb-3">
+          {player.decks.length === 0 && !addingDeck && (
+            <p className="rounded-lg bg-neutral-800/60 px-3 py-2 text-xs text-neutral-400">
+              No decks yet for {player.name}.
             </p>
-          ) : (
+          )}
+          {player.decks.length > 0 && (
             <select
               value={deckId ?? ""}
               onChange={(e) => onSelectDeck(e.target.value || null)}
@@ -61,6 +73,22 @@ export default function PodPlayerRow({
                 </option>
               ))}
             </select>
+          )}
+
+          {addingDeck ? (
+            <DeckForm
+              onCancel={() => setAddingDeck(false)}
+              onSave={(name, commander, colors, artCropUrl) => {
+                onAddDeck(name, commander, colors, artCropUrl).then(() => setAddingDeck(false));
+              }}
+            />
+          ) : (
+            <button
+              onClick={() => setAddingDeck(true)}
+              className="rounded-lg border border-dashed border-neutral-700 py-2 text-sm font-semibold text-neutral-400 active:scale-95"
+            >
+              + Add Deck
+            </button>
           )}
         </div>
       )}

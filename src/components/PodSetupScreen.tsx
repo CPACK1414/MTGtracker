@@ -3,16 +3,19 @@
 import { useState } from "react";
 import type { PlayerProfile } from "@/lib/library";
 import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
+import { createDeck } from "@/app/actions";
 import PodPlayerRow from "@/components/PodPlayerRow";
 import SeatAssignScreen from "@/components/SeatAssignScreen";
 
 export default function PodSetupScreen({
   players,
+  onChangePlayers,
   onBack,
   onManagePlayers,
   onStart,
 }: {
   players: PlayerProfile[];
+  onChangePlayers: (updater: (prev: PlayerProfile[]) => PlayerProfile[]) => void;
   onBack: () => void;
   onManagePlayers: () => void;
   onStart: (selections: PodSelection[]) => void;
@@ -25,6 +28,20 @@ export default function PodSetupScreen({
   const filteredPlayers = players.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase())
   );
+
+  async function addDeck(
+    playerId: string,
+    name: string,
+    commander: string,
+    colors: string,
+    artCropUrl: string | null
+  ) {
+    const deck = await createDeck(playerId, name, commander, colors, artCropUrl);
+    onChangePlayers((prev) =>
+      prev.map((p) => (p.id === playerId ? { ...p, decks: [...p.decks, deck] } : p))
+    );
+    setDeckChoice((prev) => ({ ...prev, [playerId]: deck.id }));
+  }
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -118,6 +135,9 @@ export default function PodSetupScreen({
                   deckId={deckChoice[p.id] ?? null}
                   onToggleSelect={() => toggleSelect(p.id)}
                   onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
+                  onAddDeck={(name, commander, colors, artCropUrl) =>
+                    addDeck(p.id, name, commander, colors, artCropUrl)
+                  }
                 />
               ))}
             </div>

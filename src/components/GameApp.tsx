@@ -437,6 +437,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       return (
         <PodSetupScreen
           players={sortedLibraryPlayers}
+          onChangePlayers={setLibraryPlayers}
           onBack={() => setHomeScreen("welcome")}
           onManagePlayers={() => setHomeScreen("library")}
           onStart={startGame}
