@@ -692,17 +692,20 @@ function DamageDealtCard({ totalDamage }: { totalDamage: ReportingData["funStats
 function TurnDurationRankCard({
   emoji,
   label,
+  explainer,
   ranks,
 }: {
   emoji: string;
   label: string;
+  explainer?: string;
   ranks: ReportingData["funStats"]["longestTurnAvg"];
 }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <p className={`text-xs font-semibold uppercase tracking-wide text-neutral-500 ${explainer ? "" : "mb-2"}`}>
         {emoji} {label}
       </p>
+      {explainer && <p className="mb-2 text-[11px] text-neutral-600">{explainer}</p>}
       {ranks.length === 0 ? (
         <p className="text-sm text-neutral-600">Not enough data yet</p>
       ) : (
@@ -865,7 +868,8 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
       <CollapsibleSection title="Turns & Pace" emoji="⏱️">
         <FunStatCard
           emoji="🕰️"
-          label="Longest Turn Ever"
+          label="IS IT STILL YOUR TURN?!"
+          explainer="Longest single turn ever"
           entries={
             stats.longestTurnEver
               ? stats.longestTurnEver.entries.map((e) => ({
@@ -876,11 +880,16 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
           }
         />
         <TurnDurationRankCard emoji="🐌" label="Longest Turn On Average" ranks={stats.longestTurnAvg} />
-        <TurnDurationRankCard emoji="⚡" label="Speed Demon" ranks={stats.speedDemon} />
+        <TurnDurationRankCard
+          emoji="⚡"
+          label="Speed Demon"
+          explainer="Fastest average turn time"
+          ranks={stats.speedDemon}
+        />
         <AvgTurnsPerGameCard avgTurnsPerGame={stats.avgTurnsPerGame} />
         <FunStatCard
           emoji="⏱️"
-          label="IS IT STILL YOUR TURN?!"
+          label="The Filibuster"
           explainer="Longest average game"
           entries={stats.longestAvgGame.map((s) => ({
             name: displayName(s.name, s.screenName),
