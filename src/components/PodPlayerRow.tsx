@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { PlayerProfile } from "@/lib/library";
 import DeckForm from "@/components/DeckForm";
+import DeckPickerModal from "@/components/DeckPickerModal";
+import ColorPips from "@/components/ColorPips";
 
 export default function PodPlayerRow({
   player,
@@ -25,7 +27,8 @@ export default function PodPlayerRow({
   ) => Promise<void>;
 }) {
   const [addingDeck, setAddingDeck] = useState(false);
-  const ADD_NEW = "__add_new__";
+  const [showPicker, setShowPicker] = useState(false);
+  const selectedDeck = player.decks.find((d) => d.id === deckId) ?? null;
 
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900">
@@ -62,27 +65,38 @@ export default function PodPlayerRow({
               }}
             />
           ) : (
-            <select
-              value={deckId ?? ""}
-              onChange={(e) => {
-                if (e.target.value === ADD_NEW) {
-                  setAddingDeck(true);
-                  return;
-                }
-                onSelectDeck(e.target.value || null);
-              }}
-              className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white outline-none"
-            >
-              <option value="" disabled>
-                Choose a deck
-              </option>
-              {player.decks.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-              <option value={ADD_NEW}>+ Add Deck</option>
-            </select>
+            <>
+              <button
+                onClick={() => setShowPicker(true)}
+                className="flex w-full items-center gap-2 rounded-lg bg-neutral-800 px-3 py-2 text-left text-sm outline-none"
+              >
+                {selectedDeck ? (
+                  <>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-white">
+                      {selectedDeck.name}
+                    </span>
+                    <ColorPips colors={selectedDeck.colors} />
+                  </>
+                ) : (
+                  <span className="flex-1 text-neutral-500">Choose a deck</span>
+                )}
+                <span className="shrink-0 text-neutral-500">▾</span>
+              </button>
+              {showPicker && (
+                <DeckPickerModal
+                  decks={player.decks}
+                  onPick={(id) => {
+                    onSelectDeck(id);
+                    setShowPicker(false);
+                  }}
+                  onAddNew={() => {
+                    setShowPicker(false);
+                    setAddingDeck(true);
+                  }}
+                  onClose={() => setShowPicker(false)}
+                />
+              )}
+            </>
           )}
         </div>
       )}
