@@ -51,3 +51,18 @@ body {
 .ready-glow {
   animation: ready-pulse 1.6s ease-in-out infinite;
 }
+
+/* Expands the tappable area beyond the visible button box (mostly
+   vertically, since the header row has spare padding there) without
+   changing how big the button looks. */
+.tap-target-expand {
+  position: relative;
+}
+.tap-target-expand::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: -4px;
+  right: -4px;
+}

@@ -508,7 +508,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-3">
+      <header className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-1">
         <button
           onClick={() => setShowEndGame(true)}
           className="shrink-0 text-sm font-semibold text-neutral-400"
@@ -530,7 +530,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         <button
           onClick={passTurn}
           disabled={!currentTurnPlayerId}
-          className="shrink-0 rounded-full bg-neutral-800 px-3 py-1.5 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
+          className="tap-target-expand shrink-0 rounded-full bg-neutral-800 px-3 py-2 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
         >
           ⏭️ Pass ⏭️
         </button>
@@ -552,7 +552,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       </header>
 
       <div
-        className="flex-1 gap-2 p-2"
+        className="flex-1 gap-1.5 p-1.5"
         style={{
           display: "grid",
           gridTemplateColumns: layoutTemplate.columns,
