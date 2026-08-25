@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { GameLifeChart } from "@/app/actions";
+import { formatHoursMinutes } from "@/lib/format";
 
 const COLORS = ["#34d399", "#22d3ee", "#a78bfa", "#fbbf24"];
 
@@ -21,6 +22,23 @@ function eliminationLabel(reason: string | null): string {
   if (reason === "poison") return "poison";
   if (reason === "scoop") return "scooped";
   return "eliminated";
+}
+
+const NICE_TICK_INTERVALS_SECONDS = [
+  30, 60, 120, 300, 600, 900, 1800, 3600, 5400, 7200, 10800, 14400, 21600, 28800,
+];
+
+function pickTimeTicks(maxSeconds: number): number[] {
+  const targetCount = 5;
+  const interval =
+    NICE_TICK_INTERVALS_SECONDS.find((candidate) => maxSeconds / candidate <= targetCount) ??
+    NICE_TICK_INTERVALS_SECONDS[NICE_TICK_INTERVALS_SECONDS.length - 1];
+  const ticks: number[] = [];
+  for (let t = 0; t < maxSeconds; t += interval) {
+    ticks.push(t);
+  }
+  ticks.push(maxSeconds);
+  return ticks;
 }
 
 type Selected = { playerId: string; elapsedSeconds: number; life: number };
@@ -59,6 +77,7 @@ export default function LifeChart({ chart }: { chart: GameLifeChart }) {
   }
 
   const gridLines = [0, 10, 20, 30, 40].filter((v) => v >= minLife - 0.01 && v <= maxLife + 0.01);
+  const timeTicks = pickTimeTicks(maxTime);
   const selectedSeries = selected ? chart.series.find((s) => s.playerId === selected.playerId) : null;
 
   return (
@@ -84,12 +103,29 @@ export default function LifeChart({ chart }: { chart: GameLifeChart }) {
               </text>
             </g>
           ))}
-          <text x={padding.left} y={height - 8} fontSize={9} fill="#737373">
-            0:00
-          </text>
-          <text x={width - padding.right} y={height - 8} fontSize={9} fill="#737373" textAnchor="end">
-            {formatElapsed(maxTime)}
-          </text>
+          {timeTicks.map((t) => (
+            <g key={`time-${t}`}>
+              {t > 0 && t < maxTime && (
+                <line
+                  x1={x(t)}
+                  x2={x(t)}
+                  y1={padding.top}
+                  y2={padding.top + plotH}
+                  stroke="#2e2e2e"
+                  strokeWidth={1}
+                />
+              )}
+              <text
+                x={x(t)}
+                y={height - 8}
+                fontSize={9}
+                fill="#737373"
+                textAnchor={t === 0 ? "start" : t === maxTime ? "end" : "middle"}
+              >
+                {formatHoursMinutes(t)}
+              </text>
+            </g>
+          ))}
 
           {chart.series.map((s, i) => {
             const color = COLORS[i % COLORS.length];

@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { getGameDetail, type GameDetail } from "@/app/actions";
 import PlayByPlayModal from "@/components/PlayByPlayModal";
 import type { EliminationReason } from "@/lib/types";
+import { formatHoursMinutes } from "@/lib/format";
 
+// Per-turn breakdown stays precise (seconds matter for turn-speed
+// comparisons); only the overall game length switches to "1h 23m" style.
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
   const hours = Math.floor(seconds / 3600);
@@ -12,6 +15,11 @@ function formatDuration(seconds: number | null): string {
   const secs = seconds % 60;
   const pad = (n: number) => n.toString().padStart(2, "0");
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
+}
+
+function formatGameDuration(seconds: number | null): string {
+  if (seconds == null) return "—";
+  return formatHoursMinutes(seconds);
 }
 
 function formatPlayedAt(iso: string): string {
@@ -73,7 +81,7 @@ export default function GameDetailModal({
           <>
             <p className="text-xs text-neutral-500">
               {formatPlayedAt(detail.playedAt)} · {detail.podSize}-player pod ·{" "}
-              {formatDuration(detail.durationSeconds)}
+              {formatGameDuration(detail.durationSeconds)}
             </p>
 
             {detail.firstPlayerName && (

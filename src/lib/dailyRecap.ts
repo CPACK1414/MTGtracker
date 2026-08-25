@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { games, gameParticipants, players, decks, dailyRecapSent } from "@/db/schema";
+import { formatHoursMinutes } from "@/lib/format";
 
 const DENVER_TZ = "America/Denver";
 const FROM_ADDRESS = "MTG Game Tracker <onboarding@resend.dev>";
@@ -34,11 +35,7 @@ function denverDateLabel(d: Date): string {
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  return formatHoursMinutes(seconds);
 }
 
 function ordinal(n: number): string {

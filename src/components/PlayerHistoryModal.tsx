@@ -4,14 +4,11 @@ import { useEffect, useState } from "react";
 import { getPlayerGameHistory, type PlayerGameHistoryEntry } from "@/app/actions";
 import GameDetailModal from "@/components/GameDetailModal";
 import type { EliminationReason } from "@/lib/types";
+import { formatHoursMinutes } from "@/lib/format";
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
+  return formatHoursMinutes(seconds);
 }
 
 function formatPlayedAt(iso: string): string {

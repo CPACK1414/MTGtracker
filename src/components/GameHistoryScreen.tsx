@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getGameHistory, type DateRange, type GameHistoryEntry } from "@/app/actions";
 import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
+import { formatHoursMinutes } from "@/lib/format";
 import GameDetailModal from "@/components/GameDetailModal";
 
 type TimeRangeKey = "all" | "7d" | "30d" | "90d" | "1y" | "custom";
@@ -23,11 +24,7 @@ const TIME_RANGES: { key: TimeRangeKey; label: string; days?: number }[] = [
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "—";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
+  return formatHoursMinutes(seconds);
 }
 
 function formatPlayedAt(iso: string): string {

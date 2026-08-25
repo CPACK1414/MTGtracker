@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getReportingData, type DateRange, type ReportingData } from "@/app/actions";
 import { MAX_POD_SIZE, MIN_POD_SIZE } from "@/lib/types";
+import { formatHoursMinutes } from "@/lib/format";
 import PlayerHistoryModal from "@/components/PlayerHistoryModal";
 
 type Scope = "player" | "deck";
@@ -39,6 +40,8 @@ function pct(rate: number): string {
   return `${Math.round(rate * 100)}%`;
 }
 
+// Turn-level durations stay precise (seconds matter for turn-speed
+// comparisons); overall game-length stats use formatGameDuration below.
 function formatDuration(seconds: number): string {
   const totalSeconds = Math.round(seconds);
   const hours = Math.floor(totalSeconds / 3600);
@@ -46,6 +49,10 @@ function formatDuration(seconds: number): string {
   const secs = totalSeconds % 60;
   const pad = (n: number) => n.toString().padStart(2, "0");
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
+}
+
+function formatGameDuration(seconds: number): string {
+  return formatHoursMinutes(seconds);
 }
 
 function displayName(name: string, screenName?: string | null) {
@@ -877,7 +884,7 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
           explainer="Longest average game"
           entries={stats.longestAvgGame.map((s) => ({
             name: displayName(s.name, s.screenName),
-            valueText: formatDuration(s.avgDurationSeconds),
+            valueText: formatGameDuration(s.avgDurationSeconds),
           }))}
         />
       </CollapsibleSection>
