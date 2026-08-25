@@ -7,10 +7,12 @@ export default function FirstPlayerRandomizer({
   players,
   onClose,
   onPicked,
+  closeLabel = "Done",
 }: {
   players: Player[];
   onClose: () => void;
   onPicked: (id: string) => void;
+  closeLabel?: string;
 }) {
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [settled, setSettled] = useState(false);
@@ -73,7 +75,7 @@ export default function FirstPlayerRandomizer({
           onClick={onClose}
           className="mt-4 rounded-2xl bg-emerald-500 px-8 py-4 text-lg font-bold text-white active:scale-95"
         >
-          Done
+          {closeLabel}
         </button>
       )}
     </div>

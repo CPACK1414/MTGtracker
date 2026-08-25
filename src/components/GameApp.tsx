@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   COMMANDER_DAMAGE_LETHAL,
   POISON_LETHAL,
+  STARTING_LIFE,
   makeEmptyDamage,
   makePlayers,
   type PodSelection,
@@ -19,6 +20,7 @@ import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
+import ReadyUpScreen from "@/components/ReadyUpScreen";
 import EndGameModal from "@/components/EndGameModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import CounterModal from "@/components/CounterModal";
@@ -65,6 +67,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [hasPassedOnce, setHasPassedOnce] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
   const [showRerollConfirm, setShowRerollConfirm] = useState(false);
+  const [showReadyUp, setShowReadyUp] = useState(false);
+  const [readyPlayerIds, setReadyPlayerIds] = useState<Set<string>>(new Set());
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -206,6 +210,22 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     }
   }
 
+  function markReady(id: string) {
+    setReadyPlayerIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    if (showReadyUp && players && players.length > 0 && readyPlayerIds.size >= players.length) {
+      setShowReadyUp(false);
+      setShowRandomizer(true);
+    }
+  }, [showReadyUp, players, readyPlayerIds]);
+
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
     if (!players) return map;
@@ -236,13 +256,44 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     });
     setRotations(initialRotations);
     setGameStartedAt(Date.now());
-    setShowRandomizer(true);
+    setShowRandomizer(false);
     setCurrentTurnPlayerId(null);
     setTurnStartedAtElapsed(null);
     setLastPass(null);
     setHasPassedOnce(false);
     setRoundNumber(1);
     setShowRerollConfirm(false);
+    setShowReadyUp(true);
+    setReadyPlayerIds(new Set());
+
+    if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
+    batchTimeoutRef.current = null;
+    pendingChangesRef.current = {};
+    pendingWindowStartRef.current = null;
+    eventsRef.current = [];
+  }
+
+  function restartGame() {
+    if (!players) return;
+    const freshPlayers = players.map((p) => ({
+      ...p,
+      life: STARTING_LIFE,
+      eliminated: false,
+      eliminationReason: undefined,
+    }));
+    setPlayers(freshPlayers);
+    setDamage(makeEmptyDamage(freshPlayers));
+    setPoison(Object.fromEntries(freshPlayers.map((p) => [p.id, 0])));
+    setRadiation(Object.fromEntries(freshPlayers.map((p) => [p.id, 0])));
+    setFirstPlayerId(null);
+    setEliminationOrder([]);
+    setGameStartedAt(Date.now());
+    setCurrentTurnPlayerId(null);
+    setTurnStartedAtElapsed(null);
+    setLastPass(null);
+    setHasPassedOnce(false);
+    setRoundNumber(1);
+    setShowRandomizer(true);
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
     batchTimeoutRef.current = null;
@@ -279,6 +330,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setHasPassedOnce(false);
     setRoundNumber(1);
     setShowRerollConfirm(false);
+    setShowReadyUp(false);
+    setReadyPlayerIds(new Set());
     setHomeScreen("welcome");
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
@@ -503,7 +556,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           {!hasPassedOnce ? (
             <button
               onClick={() => setShowRerollConfirm(true)}
-              aria-label="Re-roll first player"
+              aria-label="Restart game"
               className="text-lg leading-none"
             >
               🎲
@@ -604,18 +657,23 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           players={players}
           onPicked={setFirstPlayerId}
           onClose={handleRandomizerClose}
+          closeLabel={currentTurnPlayerId === null ? "Start Game" : "Done"}
         />
+      )}
+
+      {showReadyUp && (
+        <ReadyUpScreen players={players} readyPlayerIds={readyPlayerIds} onReady={markReady} />
       )}
 
       {showRerollConfirm && (
         <ConfirmModal
-          title="Re-roll first player?"
-          message="This picks a new random first player."
-          confirmLabel="Re-roll"
+          title="Restart the game?"
+          message="This resets everyone's life, damage, and counters back to a clean slate and re-rolls the first player."
+          confirmLabel="Restart"
           onCancel={() => setShowRerollConfirm(false)}
           onConfirm={() => {
             setShowRerollConfirm(false);
-            setShowRandomizer(true);
+            restartGame();
           }}
         />
       )}
