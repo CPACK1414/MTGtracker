@@ -74,19 +74,18 @@ export default function SeatAssignScreen({
         <span className="w-12" />
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <p className="mb-6 text-center text-sm text-neutral-400">
+      <div className="flex min-h-0 flex-1 flex-col px-3 py-3">
+        <p className="mb-3 shrink-0 text-center text-sm text-neutral-400">
           Assign who sits where so everyone can read their own card
         </p>
 
         <div
-          className="mx-auto grid w-full max-w-xs gap-3"
+          className="min-h-0 w-full flex-1 gap-2"
           style={{
             display: "grid",
             gridTemplateColumns: template.columns,
             gridTemplateRows: template.rows,
             gridTemplateAreas: gridTemplateAreas(template),
-            minHeight: 280,
           }}
         >
           {template.placements.map((placement, i) => {
