@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { PlayerProfile } from "@/lib/library";
+import type { PlayerProfile, Deck } from "@/lib/library";
 import { MAX_POD_SIZE, MIN_POD_SIZE, type PodSelection } from "@/lib/types";
 import type { Rotation } from "@/lib/layout";
 import { createDeck } from "@/app/actions";
 import PodPlayerRow from "@/components/PodPlayerRow";
-import SeatAssignScreen from "@/components/SeatAssignScreen";
+import TableSetupScreen from "@/components/TableSetupScreen";
 
 export default function PodSetupScreen({
   players,
@@ -22,8 +22,7 @@ export default function PodSetupScreen({
   onStart: (selections: PodSelection[], rotations: Rotation[]) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [deckChoice, setDeckChoice] = useState<Record<string, string | null>>({});
-  const [showSeats, setShowSeats] = useState(false);
+  const [showTableSetup, setShowTableSetup] = useState(false);
   const [search, setSearch] = useState("");
 
   const filteredPlayers = players.filter((p) =>
@@ -36,12 +35,12 @@ export default function PodSetupScreen({
     commander: string,
     colors: string,
     artCropUrl: string | null
-  ) {
+  ): Promise<Deck> {
     const deck = await createDeck(playerId, name, commander, colors, artCropUrl);
     onChangePlayers((prev) =>
       prev.map((p) => (p.id === playerId ? { ...p, decks: [...p.decks, deck] } : p))
     );
-    setDeckChoice((prev) => ({ ...prev, [playerId]: deck.id }));
+    return deck;
   }
 
   function toggleSelect(id: string) {
@@ -52,35 +51,19 @@ export default function PodSetupScreen({
     });
   }
 
-  function buildSelections(): PodSelection[] {
-    return selectedIds
-      .map((id) => players.find((p) => p.id === id))
-      .filter((p): p is NonNullable<typeof p> => Boolean(p))
-      .map((p) => {
-        const dId = deckChoice[p.id] ?? null;
-        const deck = dId ? p.decks.find((d) => d.id === dId) : undefined;
-        return {
-          profileId: p.id,
-          name: p.name,
-          screenName: p.screenName,
-          deckId: dId,
-          deckName: deck?.name,
-          commander: deck?.commander ?? undefined,
-          artCropUrl: deck?.artCropUrl ?? null,
-        };
-      });
-  }
-
   const sizeOk = selectedIds.length >= MIN_POD_SIZE && selectedIds.length <= MAX_POD_SIZE;
-  const allHaveDecks = selectedIds.every((id) => Boolean(deckChoice[id]));
-  const canStart = sizeOk && allHaveDecks;
+  const canStart = sizeOk;
 
-  if (showSeats) {
+  if (showTableSetup) {
+    const selectedPlayers = selectedIds
+      .map((id) => players.find((p) => p.id === id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
     return (
-      <SeatAssignScreen
-        selections={buildSelections()}
-        onBack={() => setShowSeats(false)}
+      <TableSetupScreen
+        players={selectedPlayers}
+        onBack={() => setShowTableSetup(false)}
         onStart={onStart}
+        onAddDeck={addDeck}
       />
     );
   }
@@ -97,7 +80,8 @@ export default function PodSetupScreen({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <p className="mb-3 text-center text-sm text-neutral-400">
-          Pick {MIN_POD_SIZE}–{MAX_POD_SIZE} players for this pod — everyone needs a deck to start
+          Pick {MIN_POD_SIZE}–{MAX_POD_SIZE} players for this pod — you&apos;ll each pick your own
+          deck on the next screen
         </p>
 
         {players.length === 0 ? (
@@ -133,12 +117,7 @@ export default function PodSetupScreen({
                   key={p.id}
                   player={p}
                   selected={selectedIds.includes(p.id)}
-                  deckId={deckChoice[p.id] ?? null}
                   onToggleSelect={() => toggleSelect(p.id)}
-                  onSelectDeck={(deckId) => setDeckChoice((prev) => ({ ...prev, [p.id]: deckId }))}
-                  onAddDeck={(name, commander, colors, artCropUrl) =>
-                    addDeck(p.id, name, commander, colors, artCropUrl)
-                  }
                 />
               ))}
             </div>
@@ -150,7 +129,7 @@ export default function PodSetupScreen({
         <div className="border-t border-neutral-800 px-4 py-4">
           <button
             disabled={!canStart}
-            onClick={() => setShowSeats(true)}
+            onClick={() => setShowTableSetup(true)}
             className="w-full rounded-2xl bg-emerald-500 px-8 py-5 text-xl font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-30 disabled:shadow-none"
           >
             {selectedIds.length === 0
@@ -159,9 +138,7 @@ export default function PodSetupScreen({
               ? `Pick at least ${MIN_POD_SIZE} players`
               : !sizeOk
               ? `Max ${MAX_POD_SIZE} players`
-              : !allHaveDecks
-              ? "Pick a deck for everyone"
-              : `Next: Choose Seats (${selectedIds.length})`}
+              : `Next: Set Up Table / Decks (${selectedIds.length})`}
           </button>
         </div>
       )}

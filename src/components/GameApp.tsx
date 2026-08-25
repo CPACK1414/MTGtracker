@@ -20,7 +20,6 @@ import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
-import ReadyUpScreen from "@/components/ReadyUpScreen";
 import EndGameModal from "@/components/EndGameModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import CounterModal from "@/components/CounterModal";
@@ -67,8 +66,6 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [hasPassedOnce, setHasPassedOnce] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
   const [showRerollConfirm, setShowRerollConfirm] = useState(false);
-  const [showReadyUp, setShowReadyUp] = useState(false);
-  const [readyPlayerIds, setReadyPlayerIds] = useState<Set<string>>(new Set());
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -210,22 +207,6 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     }
   }
 
-  function markReady(id: string) {
-    setReadyPlayerIds((prev) => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }
-
-  useEffect(() => {
-    if (showReadyUp && players && players.length > 0 && readyPlayerIds.size >= players.length) {
-      setShowReadyUp(false);
-      setShowRandomizer(true);
-    }
-  }, [showReadyUp, players, readyPlayerIds]);
-
   const maxIncomingDamage = useMemo(() => {
     const map: Record<string, number> = {};
     if (!players) return map;
@@ -256,15 +237,13 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     });
     setRotations(initialRotations);
     setGameStartedAt(Date.now());
-    setShowRandomizer(false);
+    setShowRandomizer(true);
     setCurrentTurnPlayerId(null);
     setTurnStartedAtElapsed(null);
     setLastPass(null);
     setHasPassedOnce(false);
     setRoundNumber(1);
     setShowRerollConfirm(false);
-    setShowReadyUp(true);
-    setReadyPlayerIds(new Set());
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
     batchTimeoutRef.current = null;
@@ -335,8 +314,6 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     setHasPassedOnce(false);
     setRoundNumber(1);
     setShowRerollConfirm(false);
-    setShowReadyUp(false);
-    setReadyPlayerIds(new Set());
     setHomeScreen("welcome");
 
     if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
@@ -663,15 +640,6 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           onPicked={setFirstPlayerId}
           onClose={handleRandomizerClose}
           closeLabel={currentTurnPlayerId === null ? "Start Game" : "Done"}
-        />
-      )}
-
-      {showReadyUp && (
-        <ReadyUpScreen
-          players={players}
-          readyPlayerIds={readyPlayerIds}
-          rotations={rotations}
-          onReady={markReady}
         />
       )}
 
