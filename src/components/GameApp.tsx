@@ -508,29 +508,29 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-1">
+      <header className="flex items-center justify-between gap-1 border-b border-neutral-800 px-2 py-1 md:gap-2 md:px-4 md:py-2">
         <button
           onClick={() => setShowEndGame(true)}
-          className="shrink-0 text-sm font-semibold text-neutral-400"
+          className="shrink-0 text-sm font-semibold text-neutral-400 md:text-base"
         >
           🏁 End
         </button>
         <button
           onClick={undoPass}
           disabled={!lastPass}
-          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-neutral-400 active:scale-95 disabled:opacity-30"
+          className="shrink-0 rounded-full bg-neutral-800 px-2.5 py-1.5 text-xs font-bold text-neutral-400 active:scale-95 disabled:opacity-30 md:px-4 md:py-2 md:text-sm"
         >
           Undo Pass
         </button>
         {gameStartedAt && turnStartedAtElapsed !== null ? (
           <GameTimer startedAt={gameStartedAt + turnStartedAtElapsed * 1000} />
         ) : (
-          <span className="text-sm font-semibold tabular-nums text-neutral-600">0:00</span>
+          <span className="text-sm font-semibold tabular-nums text-neutral-600 md:text-base">0:00</span>
         )}
         <button
           onClick={passTurn}
           disabled={!currentTurnPlayerId}
-          className="tap-target-expand shrink-0 rounded-full bg-neutral-800 px-3 py-2 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30"
+          className="tap-target-expand shrink-0 rounded-full bg-neutral-800 px-3 py-2 text-xs font-bold text-emerald-400 active:scale-95 disabled:opacity-30 md:px-5 md:py-2.5 md:text-sm"
         >
           ⏭️ Pass ⏭️
         </button>
@@ -539,12 +539,12 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
             <button
               onClick={() => setShowRerollConfirm(true)}
               aria-label="Restart game"
-              className="text-lg leading-none"
+              className="text-lg leading-none md:text-2xl"
             >
               🎲
             </button>
           ) : (
-            <span className="text-sm font-semibold tabular-nums text-neutral-400">
+            <span className="text-sm font-semibold tabular-nums text-neutral-400 md:text-base">
               Turn {roundNumber}
             </span>
           )}

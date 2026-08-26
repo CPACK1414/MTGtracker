@@ -22,7 +22,7 @@ export default function GameTimer({ startedAt }: { startedAt: number }) {
   }, []);
 
   return (
-    <span className="justify-self-center text-sm font-semibold tabular-nums text-neutral-300">
+    <span className="justify-self-center text-sm font-semibold tabular-nums text-neutral-300 md:text-base">
       {formatDuration(now - startedAt)}
     </span>
   );

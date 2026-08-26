@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useElementSize } from "@/hooks/useElementSize";
+import { CardSizeProvider } from "@/lib/cardSize";
 import type { Rotation } from "@/lib/layout";
 
 export default function RotatableCard({
@@ -28,7 +29,9 @@ export default function RotatableCard({
           transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
         }}
       >
-        {children}
+        <CardSizeProvider value={{ width: innerWidth, height: innerHeight }}>
+          {children}
+        </CardSizeProvider>
       </div>
     </div>
   );

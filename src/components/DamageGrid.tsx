@@ -2,6 +2,16 @@
 
 import Image from "next/image";
 import type { OpponentDamage } from "@/components/PlayerCard";
+import { useCardSizeTier } from "@/lib/cardSize";
+
+const BADGE_TEXT_SIZE = ["text-[10px]", "text-xs", "text-sm", "text-base"];
+const RADIATION_ICON_SIZE = ["text-xs", "text-xs", "text-sm", "text-base"];
+const CONTAINER_SIZE = [
+  "gap-x-3 px-2 py-1.5",
+  "gap-x-3 px-2 py-1.5",
+  "gap-x-4 px-3 py-2",
+  "gap-x-4 px-4 py-2.5",
+];
 
 export default function DamageGrid({
   opponents,
@@ -14,11 +24,14 @@ export default function DamageGrid({
   radiation: number;
   onOpen: () => void;
 }) {
+  const tier = useCardSizeTier();
+  const badgeTextClass = `${BADGE_TEXT_SIZE[tier]} font-semibold tabular-nums text-neutral-300`;
+
   const items: { key: string; node: React.ReactNode }[] = [
     ...opponents.map((o) => ({
       key: o.id,
       node: (
-        <span className="text-[10px] font-semibold tabular-nums text-neutral-300">
+        <span className={badgeTextClass}>
           {o.name.slice(0, 3)} <span className="font-bold text-white">{o.amount}</span>
         </span>
       ),
@@ -28,7 +41,7 @@ export default function DamageGrid({
           {
             key: "poison",
             node: (
-              <span className="flex items-center gap-1 text-[10px] font-semibold tabular-nums text-neutral-300">
+              <span className={`flex items-center gap-1 ${badgeTextClass}`}>
                 <Image
                   src="/poison-counter.png"
                   alt=""
@@ -48,8 +61,8 @@ export default function DamageGrid({
           {
             key: "radiation",
             node: (
-              <span className="flex items-center gap-1 text-[10px] font-semibold tabular-nums text-neutral-300">
-                <span className="text-xs leading-none">☢</span>
+              <span className={`flex items-center gap-1 ${badgeTextClass}`}>
+                <span className={`leading-none ${RADIATION_ICON_SIZE[tier]}`}>☢</span>
                 <span className="font-bold text-white">{radiation}</span>
               </span>
             ),
@@ -63,7 +76,7 @@ export default function DamageGrid({
   return (
     <button
       onClick={onOpen}
-      className="mx-auto grid grid-cols-2 gap-x-3 gap-y-0.5 rounded-xl bg-neutral-800/45 px-2 py-1.5 active:scale-95"
+      className={`mx-auto grid grid-cols-2 gap-y-0.5 rounded-xl bg-neutral-800/45 active:scale-95 ${CONTAINER_SIZE[tier]}`}
     >
       {items.map((item, i) => (
         <span
