@@ -11,6 +11,7 @@ export default function EndGameModal({
   gameStartedAt,
   onCancel,
   onConfirm,
+  onAbandon,
 }: {
   players: Player[];
   saving: boolean;
@@ -18,6 +19,7 @@ export default function EndGameModal({
   gameStartedAt: number | null;
   onCancel: () => void;
   onConfirm: (winnerId: string) => void;
+  onAbandon: () => void;
 }) {
   const alive = players.filter((p) => !p.eliminated);
   const [winnerId, setWinnerId] = useState<string | null>(
@@ -80,6 +82,14 @@ export default function EndGameModal({
             {saving ? "Saving…" : "Save Game"}
           </button>
         </div>
+
+        <button
+          onClick={onAbandon}
+          disabled={saving}
+          className="mt-3 text-sm font-semibold text-red-400/80 active:scale-95 disabled:opacity-50"
+        >
+          Abandon Game (don&apos;t save)
+        </button>
       </div>
     </div>
   );

@@ -29,6 +29,13 @@ import GameTimer from "@/components/GameTimer";
 import GameHistoryScreen from "@/components/GameHistoryScreen";
 import { useWakeLock } from "@/lib/useWakeLock";
 import { useConfirmUnload } from "@/lib/useConfirmUnload";
+import {
+  saveGameSnapshot,
+  loadGameSnapshot,
+  clearGameSnapshot,
+  summarizeGameSnapshot,
+  type GameSnapshot,
+} from "@/lib/gameSnapshot";
 
 type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
 type CounterMap = Record<string, number>;
@@ -66,11 +73,20 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [hasPassedOnce, setHasPassedOnce] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
   const [showRerollConfirm, setShowRerollConfirm] = useState(false);
+  const [activeSnapshot, setActiveSnapshot] = useState<GameSnapshot | null>(() =>
+    loadGameSnapshot()
+  );
+  const [showEraseActiveGameConfirm, setShowEraseActiveGameConfirm] = useState(false);
+  const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
   const pendingWindowStartRef = useRef<number | null>(null);
   const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards the autosave interval against a stale-closure race: resetToSetup()
+  // flips this synchronously, so a backstop tick that was already in flight
+  // when the game ended can't resurrect the snapshot it just cleared.
+  const activeGameRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -142,6 +158,51 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       eliminationReason: eliminationReason ?? null,
     });
   }
+
+  // Autosaves the live game to local storage so an accidental refresh or
+  // tab close doesn't lose it — re-persists on every meaningful state
+  // change, plus every 10s as a backstop for long stretches (a slow turn)
+  // where nothing else changes.
+  useEffect(() => {
+    if (!players || !gameStartedAt) return;
+
+    function persist() {
+      if (!activeGameRef.current) return;
+      saveGameSnapshot({
+        players: players!,
+        damage,
+        poison,
+        radiation,
+        firstPlayerId,
+        eliminationOrder,
+        rotations,
+        elapsedSecondsAtSave: elapsedSecondsNow(),
+        currentTurnPlayerId,
+        turnStartedAtElapsed,
+        hasPassedOnce,
+        roundNumber,
+        events: eventsRef.current,
+      });
+    }
+
+    persist();
+    const interval = setInterval(persist, 10000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    players,
+    damage,
+    poison,
+    radiation,
+    firstPlayerId,
+    eliminationOrder,
+    rotations,
+    currentTurnPlayerId,
+    turnStartedAtElapsed,
+    hasPassedOnce,
+    roundNumber,
+    gameStartedAt,
+  ]);
 
   function nextTurnPlayerId(afterId: string): string | null {
     if (!players) return null;
@@ -222,6 +283,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }, [players, damage]);
 
   function startGame(selections: PodSelection[], customRotations?: Rotation[]) {
+    activeGameRef.current = true;
     const newPlayers = makePlayers(selections);
     setPlayers(newPlayers);
     setDamage(makeEmptyDamage(newPlayers));
@@ -295,6 +357,9 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   function resetToSetup() {
+    activeGameRef.current = false;
+    clearGameSnapshot();
+    setActiveSnapshot(null);
     setPlayers(null);
     setDamage({});
     setPoison({});
@@ -321,6 +386,39 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     pendingChangesRef.current = {};
     pendingWindowStartRef.current = null;
     eventsRef.current = [];
+  }
+
+  function abandonGame() {
+    resetToSetup();
+  }
+
+  function continueGame() {
+    const snapshot = activeSnapshot;
+    if (!snapshot) return;
+    activeGameRef.current = true;
+    setPlayers(snapshot.players);
+    setDamage(snapshot.damage);
+    setPoison(snapshot.poison);
+    setRadiation(snapshot.radiation);
+    setFirstPlayerId(snapshot.firstPlayerId);
+    setEliminationOrder(snapshot.eliminationOrder);
+    setRotations(snapshot.rotations);
+    setGameStartedAt(Date.now() - snapshot.elapsedSecondsAtSave * 1000);
+    setCurrentTurnPlayerId(snapshot.currentTurnPlayerId);
+    setTurnStartedAtElapsed(snapshot.turnStartedAtElapsed);
+    setHasPassedOnce(snapshot.hasPassedOnce);
+    setRoundNumber(snapshot.roundNumber);
+    setLastPass(null);
+    setShowRandomizer(false);
+    setShowRerollConfirm(false);
+    setShowEndGame(false);
+    setSaveError(null);
+
+    if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
+    batchTimeoutRef.current = null;
+    pendingChangesRef.current = {};
+    pendingWindowStartRef.current = null;
+    eventsRef.current = snapshot.events;
   }
 
   function changeLife(id: string, delta: number, kind: "life" | "commanderDamage" = "life") {
@@ -495,12 +593,36 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
       return <GameHistoryScreen onBack={() => setHomeScreen("welcome")} />;
     }
     return (
-      <WelcomeScreen
-        onNewGame={() => setHomeScreen("newGame")}
-        onLibrary={() => setHomeScreen("library")}
-        onStats={() => setHomeScreen("stats")}
-        onGameHistory={() => setHomeScreen("gameHistory")}
-      />
+      <>
+        <WelcomeScreen
+          activeGameSummary={activeSnapshot ? summarizeGameSnapshot(activeSnapshot) : null}
+          onContinueGame={continueGame}
+          onNewGame={() => {
+            if (activeSnapshot) {
+              setShowEraseActiveGameConfirm(true);
+            } else {
+              setHomeScreen("newGame");
+            }
+          }}
+          onLibrary={() => setHomeScreen("library")}
+          onStats={() => setHomeScreen("stats")}
+          onGameHistory={() => setHomeScreen("gameHistory")}
+        />
+        {showEraseActiveGameConfirm && (
+          <ConfirmModal
+            title="Start a new game?"
+            message="This will erase your active game in progress. This can't be undone."
+            confirmLabel="Erase & Start New"
+            onCancel={() => setShowEraseActiveGameConfirm(false)}
+            onConfirm={() => {
+              clearGameSnapshot();
+              setActiveSnapshot(null);
+              setShowEraseActiveGameConfirm(false);
+              setHomeScreen("newGame");
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -667,6 +789,23 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
             setSaveError(null);
           }}
           onConfirm={handleEndGame}
+          onAbandon={() => {
+            setShowEndGame(false);
+            setShowAbandonConfirm(true);
+          }}
+        />
+      )}
+
+      {showAbandonConfirm && (
+        <ConfirmModal
+          title="Abandon this game?"
+          message="This won't be saved to anyone's history and can't be undone."
+          confirmLabel="Abandon Game"
+          onCancel={() => setShowAbandonConfirm(false)}
+          onConfirm={() => {
+            setShowAbandonConfirm(false);
+            abandonGame();
+          }}
         />
       )}
     </div>

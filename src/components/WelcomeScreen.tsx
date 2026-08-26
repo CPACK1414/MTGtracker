@@ -3,11 +3,15 @@
 import Image from "next/image";
 
 export default function WelcomeScreen({
+  activeGameSummary,
+  onContinueGame,
   onNewGame,
   onLibrary,
   onStats,
   onGameHistory,
 }: {
+  activeGameSummary?: string | null;
+  onContinueGame?: () => void;
   onNewGame: () => void;
   onLibrary: () => void;
   onStats: () => void;
@@ -21,6 +25,18 @@ export default function WelcomeScreen({
       </div>
 
       <div className="flex w-full max-w-sm flex-col gap-3">
+        {activeGameSummary && onContinueGame && (
+          <button
+            onClick={onContinueGame}
+            className="flex items-center gap-3 rounded-2xl bg-indigo-500 px-5 py-3 text-left shadow-lg shadow-indigo-500/20 active:scale-95"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center text-xl">▶️</span>
+            <span>
+              <span className="block text-base font-bold text-white">Continue Game</span>
+              <span className="block text-xs text-indigo-950/70">{activeGameSummary}</span>
+            </span>
+          </button>
+        )}
         <button
           onClick={onNewGame}
           className="flex items-center gap-4 rounded-2xl bg-emerald-500 px-6 py-5 text-left shadow-lg shadow-emerald-500/20 active:scale-95"
