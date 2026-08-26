@@ -76,6 +76,7 @@ const REVIVE_DEAD_SIZE = [
 ];
 const STEPPER_SIZE = ["text-4xl", "text-4xl", "text-5xl", "text-6xl"];
 const LETHAL_TEXT_SIZE = ["text-xs", "text-xs", "text-sm", "text-base"];
+const LIFE_DELTA_SIZE = ["text-3xl", "text-3xl", "text-4xl", "text-5xl"];
 
 export default function PlayerCard({
   player,
@@ -136,9 +137,10 @@ export default function PlayerCard({
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
         {lifeDelta !== 0 && (
           <span
-            className={`text-lg font-bold tabular-nums drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] ${
-              lifeDelta > 0 ? "text-emerald-400" : "text-red-400"
+            className={`${LIFE_DELTA_SIZE[tier]} font-bold tabular-nums drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] ${
+              lifeDelta > 0 ? "text-emerald-400" : "text-red-300"
             }`}
+            style={{ WebkitTextStroke: "1.5px rgba(0,0,0,0.9)", paintOrder: "stroke fill" }}
           >
             {lifeDelta > 0 ? `+${lifeDelta}` : lifeDelta}
           </span>
