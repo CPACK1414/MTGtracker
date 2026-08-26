@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { OpponentDamage } from "@/components/PlayerCard";
 import type { Rotation } from "@/lib/layout";
 import { useHoldRepeat } from "@/lib/useHoldRepeat";
+import { playDecrementSound, playIncrementSound } from "@/lib/sound";
 
 function StepperRow({
   label,
@@ -39,7 +40,10 @@ function StepperRow({
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <button
-          onPointerDown={() => minusHold.start(() => onChange(-10))}
+          onPointerDown={() => {
+            playDecrementSound();
+            minusHold.start(() => onChange(-10));
+          }}
           onPointerUp={() => minusHold.release(() => onChange(-1))}
           onPointerLeave={minusHold.cancel}
           onPointerCancel={minusHold.cancel}
@@ -49,7 +53,10 @@ function StepperRow({
         </button>
         <span className="w-6 text-center text-xl font-black tabular-nums text-white">{value}</span>
         <button
-          onPointerDown={() => plusHold.start(() => onChange(10))}
+          onPointerDown={() => {
+            playIncrementSound();
+            plusHold.start(() => onChange(10));
+          }}
           onPointerUp={() => plusHold.release(() => onChange(1))}
           onPointerLeave={plusHold.cancel}
           onPointerCancel={plusHold.cancel}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Player } from "@/lib/types";
 import DamageGrid from "@/components/DamageGrid";
 import { useHoldRepeat } from "@/lib/useHoldRepeat";
+import { playDecrementSound, playIncrementSound } from "@/lib/sound";
 import { useCardSizeTier } from "@/lib/cardSize";
 
 export type OpponentDamage = {
@@ -217,7 +218,10 @@ export default function PlayerCard({
       <div className="grid grid-cols-2 gap-2">
         <button
           disabled={player.eliminated}
-          onPointerDown={() => minusHold.start(() => onChangeLife(-10))}
+          onPointerDown={() => {
+            playDecrementSound();
+            minusHold.start(() => onChangeLife(-10));
+          }}
           onPointerUp={() => minusHold.release(() => onChangeLife(-1))}
           onPointerLeave={minusHold.cancel}
           onPointerCancel={minusHold.cancel}
@@ -227,7 +231,10 @@ export default function PlayerCard({
         </button>
         <button
           disabled={player.eliminated}
-          onPointerDown={() => plusHold.start(() => onChangeLife(10))}
+          onPointerDown={() => {
+            playIncrementSound();
+            plusHold.start(() => onChangeLife(10));
+          }}
           onPointerUp={() => plusHold.release(() => onChangeLife(1))}
           onPointerLeave={plusHold.cancel}
           onPointerCancel={plusHold.cancel}
