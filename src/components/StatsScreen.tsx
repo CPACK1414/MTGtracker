@@ -910,6 +910,12 @@ function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
           unitSingular="game"
           unitPlural="games"
         />
+        <TurnDurationRankCard
+          emoji="🐢"
+          label="Deck With The Longest Turns"
+          explainer="Longest average turn time, by deck"
+          ranks={stats.longestTurnAvgByDeck}
+        />
       </CollapsibleSection>
     </div>
   );

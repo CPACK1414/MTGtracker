@@ -305,6 +305,7 @@ export type FunStats = {
   totalDamage: { commanderDamage: number; combatDamage: number; poisonDamage: number };
   longestTurnEver: { durationSeconds: number; entries: FunStatEntry[] } | null;
   longestTurnAvg: FunStatRank[];
+  longestTurnAvgByDeck: FunStatRank[];
   avgTurnsPerGame: number | null;
   speedDemon: FunStatRank[];
   reapersTurn: FunStatRank[];
@@ -519,6 +520,18 @@ export async function getReportingData(
       entries: ids.map((id) => {
         const p = playersById.get(id);
         return { name: p?.name ?? "Unknown", screenName: p?.screenName ?? null };
+      }),
+    }));
+  }
+
+  function topDeckRanks(counts: Map<string, number>, topN = 3): FunStatRank[] {
+    return topRanks(counts, topN).map(({ rank, count, ids }) => ({
+      rank,
+      count,
+      entries: ids.map((id) => {
+        const d = decksById.get(id);
+        const playerName = d ? playersById.get(d.playerId)?.name ?? "Unknown" : "Unknown";
+        return { name: `${d?.name ?? "Unknown deck"} (${playerName})`, screenName: null };
       }),
     }));
   }
@@ -774,6 +787,29 @@ export async function getReportingData(
 
   const speedDemon = bottomPlayerRanks(turnAvgByPlayer, 3);
 
+  // Turns are logged against a player, not a deck, so route each turnEnded
+  // event through that player's participant row for the SAME game to find
+  // which deck they were actually piloting at the time.
+  const deckIdByGameAndPlayer = new Map<string, string>();
+  for (const gp of allParticipants) {
+    if (!gp.deckId) continue;
+    deckIdByGameAndPlayer.set(`${gp.gameId}|${gp.playerId}`, gp.deckId);
+  }
+  const turnTotalsByDeck = new Map<string, { total: number; count: number }>();
+  for (const e of turnEndedEvents) {
+    const deckId = deckIdByGameAndPlayer.get(`${e.gameId}|${e.playerId}`);
+    if (!deckId) continue;
+    const stat = turnTotalsByDeck.get(deckId) ?? { total: 0, count: 0 };
+    stat.total += e.turnDurationSeconds ?? 0;
+    stat.count += 1;
+    turnTotalsByDeck.set(deckId, stat);
+  }
+  const turnAvgByDeck = new Map<string, number>();
+  for (const [deckId, stat] of turnTotalsByDeck) {
+    turnAvgByDeck.set(deckId, stat.total / stat.count);
+  }
+  const longestTurnAvgByDeck = topDeckRanks(turnAvgByDeck, 3);
+
   const eventsByGameAll = new Map<string, typeof allEvents>();
   for (const e of allEvents) {
     const list = eventsByGameAll.get(e.gameId) ?? [];
@@ -885,6 +921,7 @@ export async function getReportingData(
     totalDamage,
     longestTurnEver,
     longestTurnAvg,
+    longestTurnAvgByDeck,
     avgTurnsPerGame,
     speedDemon,
     reapersTurn,
