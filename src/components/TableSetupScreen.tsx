@@ -267,19 +267,29 @@ export default function TableSetupScreen({
                         <ColorPips colors={deck.colors} />
                       </div>
                       {seatReady[i] ? (
-                        <button
-                          onClick={() => unready(i)}
-                          className="rounded-full bg-emerald-500/20 px-6 py-3 text-lg font-bold text-emerald-400 active:scale-95"
-                        >
-                          ✓ Ready
-                        </button>
+                        <>
+                          <p className="max-w-[220px] text-center text-sm font-semibold text-emerald-300">
+                            {player.name} is shuffled and ready
+                          </p>
+                          <button
+                            onClick={() => unready(i)}
+                            className="rounded-full bg-emerald-500/20 px-6 py-3 text-lg font-bold text-emerald-400 active:scale-95"
+                          >
+                            ✓ Ready
+                          </button>
+                        </>
                       ) : (
-                        <button
-                          onClick={() => markReady(i)}
-                          className="rounded-2xl bg-emerald-500 px-8 py-5 text-lg font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95"
-                        >
-                          Ready Up
-                        </button>
+                        <>
+                          <p className="max-w-[220px] rounded-lg bg-black/50 px-3 py-1.5 text-center text-sm font-semibold text-amber-300">
+                            Shuffle your deck and draw your hand, then tap Ready
+                          </p>
+                          <button
+                            onClick={() => markReady(i)}
+                            className="rounded-2xl bg-emerald-500 px-8 py-5 text-lg font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95"
+                          >
+                            Ready Up
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
