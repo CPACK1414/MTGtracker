@@ -1,11 +1,11 @@
-import { Resend } from "resend";
+import sgMail from "@sendgrid/mail";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { games, gameParticipants, players, decks, dailyRecapSent } from "@/db/schema";
 import { formatHoursMinutes } from "@/lib/format";
 
 const DENVER_TZ = "America/Denver";
-const FROM_ADDRESS = "MTG Game Tracker <onboarding@resend.dev>";
+const FROM_ADDRESS = { email: "cpack14@gmail.com", name: "MTG Game Tracker" };
 
 function denverDateKey(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -257,8 +257,8 @@ export async function sendDailyRecaps(): Promise<{
     }
   }
 
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const resend = resendApiKey ? new Resend(resendApiKey) : null;
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  if (sendgridApiKey) sgMail.setApiKey(sendgridApiKey);
 
   let sent = 0;
   let skipped = 0;
@@ -275,8 +275,8 @@ export async function sendDailyRecaps(): Promise<{
       skipped++;
       continue;
     }
-    if (!resend) {
-      errors.push("RESEND_API_KEY is not configured — no emails were sent.");
+    if (!sendgridApiKey) {
+      errors.push("SENDGRID_API_KEY is not configured — no emails were sent.");
       break;
     }
 
@@ -284,7 +284,7 @@ export async function sendDailyRecaps(): Promise<{
     const { subject, html, text } = buildRecapEmail(player.name, dateLabel, cards);
 
     try {
-      await resend.emails.send({
+      await sgMail.send({
         from: FROM_ADDRESS,
         to: player.email,
         subject,
