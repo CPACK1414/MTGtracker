@@ -11,6 +11,7 @@ export default function EndGameModal({
   gameStartedAt,
   onCancel,
   onConfirm,
+  onPauseAndExit,
   onAbandon,
 }: {
   players: Player[];
@@ -19,6 +20,7 @@ export default function EndGameModal({
   gameStartedAt: number | null;
   onCancel: () => void;
   onConfirm: (winnerId: string) => void;
+  onPauseAndExit: () => void;
   onAbandon: () => void;
 }) {
   const alive = players.filter((p) => !p.eliminated);
@@ -82,6 +84,17 @@ export default function EndGameModal({
             {saving ? "Saving…" : "Save Game"}
           </button>
         </div>
+
+        <button
+          onClick={onPauseAndExit}
+          disabled={saving}
+          className="mt-3 rounded-2xl bg-indigo-500/15 py-3 text-sm font-bold text-indigo-300 active:scale-95 disabled:opacity-50"
+        >
+          ▶️ Exit — Continue Later
+        </button>
+        <p className="mt-1 text-center text-xs text-neutral-600">
+          Keeps your progress — resume from the main menu anytime.
+        </p>
 
         <button
           onClick={onAbandon}

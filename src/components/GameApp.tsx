@@ -356,10 +356,14 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     });
   }
 
-  function resetToSetup() {
+  function resetToSetup(keepSnapshot: boolean) {
     activeGameRef.current = false;
-    clearGameSnapshot();
-    setActiveSnapshot(null);
+    if (keepSnapshot) {
+      setActiveSnapshot(loadGameSnapshot());
+    } else {
+      clearGameSnapshot();
+      setActiveSnapshot(null);
+    }
     setPlayers(null);
     setDamage({});
     setPoison({});
@@ -389,7 +393,32 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   }
 
   function abandonGame() {
-    resetToSetup();
+    resetToSetup(false);
+  }
+
+  // Deliberately leaves the live game for the main menu without ending it —
+  // writes a fresh snapshot right now (rather than waiting on the passive
+  // autosave) so "Continue Game" on the Welcome screen picks up exactly
+  // where this left off, same as an accidental refresh would.
+  function pauseAndExit() {
+    if (!players) return;
+    flushPendingChanges();
+    saveGameSnapshot({
+      players,
+      damage,
+      poison,
+      radiation,
+      firstPlayerId,
+      eliminationOrder,
+      rotations,
+      elapsedSecondsAtSave: elapsedSecondsNow(),
+      currentTurnPlayerId,
+      turnStartedAtElapsed,
+      hasPassedOnce,
+      roundNumber,
+      events: eventsRef.current,
+    });
+    resetToSetup(true);
   }
 
   function continueGame() {
@@ -552,7 +581,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         damage: damageRows,
         events: eventsRef.current,
       });
-      resetToSetup();
+      resetToSetup(false);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Couldn't save the game. Try again.");
     } finally {
@@ -789,6 +818,10 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
             setSaveError(null);
           }}
           onConfirm={handleEndGame}
+          onPauseAndExit={() => {
+            setShowEndGame(false);
+            pauseAndExit();
+          }}
           onAbandon={() => {
             setShowEndGame(false);
             setShowAbandonConfirm(true);

@@ -171,22 +171,27 @@ export default function TableSetupScreen({
                     : undefined
                 }
               >
-                <div className="flex shrink-0 items-center justify-between">
+                <div className="flex shrink-0 items-center justify-between gap-1">
                   {canGoBack ? (
                     <button
                       onClick={() => backOneStep(i)}
                       aria-label="Back"
-                      className="rounded-full bg-neutral-800 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
+                      className="shrink-0 rounded-full bg-neutral-800 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
                     >
                       ←
                     </button>
                   ) : (
-                    <span className="w-8" />
+                    <span className="w-8 shrink-0" />
+                  )}
+                  {player && (
+                    <span className="min-w-0 flex-1 truncate text-center text-xs font-bold text-white">
+                      {player.name}
+                    </span>
                   )}
                   <button
                     onClick={() => rotateSeat(i)}
                     aria-label="Rotate this seat's card"
-                    className="rounded-full bg-neutral-800 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
+                    className="shrink-0 rounded-full bg-neutral-800 px-2 py-1.5 text-sm text-neutral-400 active:scale-95"
                   >
                     ⟳
                   </button>
@@ -223,7 +228,6 @@ export default function TableSetupScreen({
                     </div>
                   ) : !deck ? (
                     <div className="flex flex-1 flex-col gap-2">
-                      <p className="shrink-0 text-center text-sm font-bold text-white">{player.name}</p>
                       {addingDeckAt[i] ? (
                         <DeckForm
                           onCancel={() => setAt(setAddingDeckAt, i, false)}
@@ -260,32 +264,31 @@ export default function TableSetupScreen({
                       )}
                     </div>
                   ) : (
-                    <div className="flex flex-1 flex-col items-center justify-center gap-4">
-                      <p className="text-sm font-bold text-white">{player.name}</p>
+                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-1">
                       <div className="flex items-center gap-1.5">
                         <span className="max-w-[80%] truncate text-sm text-neutral-300">{deck.name}</span>
                         <ColorPips colors={deck.colors} />
                       </div>
                       {seatReady[i] ? (
                         <>
-                          <p className="max-w-[220px] text-center text-sm font-semibold text-emerald-300">
+                          <p className="w-full text-center text-xs font-semibold text-emerald-300">
                             {player.name} is shuffled and ready
                           </p>
                           <button
                             onClick={() => unready(i)}
-                            className="rounded-full bg-emerald-500/20 px-6 py-3 text-lg font-bold text-emerald-400 active:scale-95"
+                            className="rounded-full bg-emerald-500/20 px-5 py-2 text-base font-bold text-emerald-400 active:scale-95"
                           >
                             ✓ Ready
                           </button>
                         </>
                       ) : (
                         <>
-                          <p className="max-w-[220px] rounded-lg bg-black/50 px-3 py-1.5 text-center text-sm font-semibold text-amber-300">
+                          <p className="w-full rounded-lg bg-black/50 px-2 py-1 text-center text-xs font-semibold text-amber-300">
                             Shuffle your deck and draw your hand, then tap Ready
                           </p>
                           <button
                             onClick={() => markReady(i)}
-                            className="rounded-2xl bg-emerald-500 px-8 py-5 text-lg font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95"
+                            className="rounded-2xl bg-emerald-500 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/20 active:scale-95"
                           >
                             Ready Up
                           </button>
