@@ -195,29 +195,36 @@ function buildRecapEmail(
   return { subject, html, text };
 }
 
+const LOOKBACK_DAYS = 3;
+
 export async function sendDailyRecaps(): Promise<{
   sent: number;
   skipped: number;
   errors: string[];
 }> {
   const now = new Date();
-  const todayKey = denverDateKey(now);
-  const dateLabel = denverDateLabel(now);
+  const cutoff = new Date(now.getTime() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
   const [allGames, allParticipants, allPlayers, allDecks, alreadySentRows] = await Promise.all([
     db.select().from(games),
     db.select().from(gameParticipants),
     db.select().from(players),
     db.select().from(decks),
-    db.select().from(dailyRecapSent).where(eq(dailyRecapSent.summaryDate, todayKey)),
+    db.select().from(dailyRecapSent),
   ]);
 
-  const todaysGames = allGames.filter((g) => denverDateKey(g.playedAt) === todayKey);
-  if (todaysGames.length === 0) {
+  // A window of recent days, not just "today" — a game that finishes right
+  // around the nightly cron's own run (e.g. an 11pm game landing minutes
+  // after that night's send already happened) would otherwise fall into a
+  // permanent gap: too late for that night, and "yesterday" by the next
+  // one. dailyRecapSent's (player, date) uniqueness makes re-scanning a
+  // few days back safe — anything already sent is just skipped.
+  const recentGames = allGames.filter((g) => g.playedAt >= cutoff);
+  if (recentGames.length === 0) {
     return { sent: 0, skipped: 0, errors: [] };
   }
 
-  const gameIds = new Set(todaysGames.map((g) => g.id));
+  const gameIds = new Set(recentGames.map((g) => g.id));
   const participantsByGame = new Map<string, (typeof allParticipants)[number][]>();
   for (const p of allParticipants) {
     if (!gameIds.has(p.gameId)) continue;
@@ -228,10 +235,15 @@ export async function sendDailyRecaps(): Promise<{
 
   const playersById = new Map(allPlayers.map((p) => [p.id, p]));
   const decksById = new Map(allDecks.map((d) => [d.id, d]));
-  const alreadySent = new Set(alreadySentRows.map((r) => r.playerId));
+  const alreadySent = new Set(alreadySentRows.map((r) => `${r.playerId}|${r.summaryDate}`));
 
-  const cardsByPlayer = new Map<string, GameCard[]>();
-  for (const game of todaysGames) {
+  const cardsByPlayerDate = new Map<string, GameCard[]>();
+  const dateLabelByDateKey = new Map<string, string>();
+  for (const game of recentGames) {
+    const dateKey = denverDateKey(game.playedAt);
+    if (!dateLabelByDateKey.has(dateKey)) {
+      dateLabelByDateKey.set(dateKey, denverDateLabel(game.playedAt));
+    }
     const participants = participantsByGame.get(game.id) ?? [];
     for (const gp of participants) {
       const player = playersById.get(gp.playerId);
@@ -251,9 +263,10 @@ export async function sendDailyRecaps(): Promise<{
         opponentNames,
         durationLabel: formatDuration(game.durationSeconds),
       };
-      const list = cardsByPlayer.get(gp.playerId) ?? [];
+      const key = `${gp.playerId}|${dateKey}`;
+      const list = cardsByPlayerDate.get(key) ?? [];
       list.push(card);
-      cardsByPlayer.set(gp.playerId, list);
+      cardsByPlayerDate.set(key, list);
     }
   }
 
@@ -264,10 +277,11 @@ export async function sendDailyRecaps(): Promise<{
   let skipped = 0;
   const errors: string[] = [];
 
-  for (const [playerId, cards] of cardsByPlayer) {
+  for (const [key, cards] of cardsByPlayerDate) {
+    const [playerId, dateKey] = key.split("|");
     const player = playersById.get(playerId);
     if (!player) continue;
-    if (alreadySent.has(playerId)) {
+    if (alreadySent.has(key)) {
       skipped++;
       continue;
     }
@@ -281,6 +295,7 @@ export async function sendDailyRecaps(): Promise<{
     }
 
     cards.sort((a, b) => a.timeLabel.localeCompare(b.timeLabel));
+    const dateLabel = dateLabelByDateKey.get(dateKey)!;
     const { subject, html, text } = buildRecapEmail(player.name, dateLabel, cards);
 
     try {
@@ -293,11 +308,11 @@ export async function sendDailyRecaps(): Promise<{
       });
       await db
         .insert(dailyRecapSent)
-        .values({ playerId, summaryDate: todayKey })
+        .values({ playerId, summaryDate: dateKey })
         .onConflictDoNothing();
       sent++;
     } catch (e) {
-      errors.push(`${player.name}: ${e instanceof Error ? e.message : "send failed"}`);
+      errors.push(`${player.name} (${dateKey}): ${e instanceof Error ? e.message : "send failed"}`);
     }
   }
 
