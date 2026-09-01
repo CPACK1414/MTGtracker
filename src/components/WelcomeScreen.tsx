@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { signOut } from "next-auth/react";
 
 export default function WelcomeScreen({
   activeGameSummary,
@@ -137,6 +138,12 @@ export default function WelcomeScreen({
       <a href="/live" target="_blank" rel="noreferrer" className="text-xs text-neutral-600 underline">
         Live Games link (for a TV or kiosk display)
       </a>
+      <button
+        onClick={() => signOut({ redirectTo: "/signin" })}
+        className="text-xs text-neutral-600 underline"
+      >
+        Sign out
+      </button>
     </div>
   );
 }
