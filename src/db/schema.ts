@@ -95,6 +95,19 @@ export const commanderDamage = pgTable("commander_damage", {
   amount: integer("amount").notNull().default(0),
 });
 
+// A live-in-progress game's spectator snapshot — any game (tournament pod
+// or quick game) pushes here while it's being played, so the Welcome
+// screen can show "Live Games" across every device. Rows are ephemeral:
+// pushes stop once the game ends, and stale rows (a crash, a refresh that
+// lost the session id) are filtered by age at read time rather than
+// relying on cleanup always running — see getLiveGames().
+export const activeGames = pgTable("active_games", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  liveSnapshot: jsonb("live_snapshot").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const tournaments = pgTable("tournaments", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizerPlayerId: uuid("organizer_player_id")

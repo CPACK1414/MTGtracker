@@ -20,6 +20,7 @@ import {
   reportPodResult,
   type TournamentPodView,
 } from "@/app/tournamentActions";
+import { endActiveGame, getLiveGames, pushActiveGameSnapshot, type LiveGameView } from "@/app/liveGameActions";
 import { getLayoutTemplate, getValidRotations, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
@@ -28,6 +29,7 @@ import TournamentSetupScreen from "@/components/TournamentSetupScreen";
 import TournamentShareLinksScreen from "@/components/TournamentShareLinksScreen";
 import TournamentBracketScreen from "@/components/TournamentBracketScreen";
 import TournamentJoinCompleteScreen from "@/components/TournamentJoinCompleteScreen";
+import LiveGamesScreen from "@/components/LiveGamesScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
@@ -59,7 +61,8 @@ type HomeScreen =
   | "tournamentSetup"
   | "tournamentShareLinks"
   | "tournamentBracket"
-  | "tournamentJoinComplete";
+  | "tournamentJoinComplete"
+  | "liveGames";
 type CounterMap = Record<string, number>;
 type PendingChange = { life: number; commanderDamage: number; poison: number; radiation: number };
 
@@ -124,6 +127,8 @@ export default function GameApp({
   const [tournamentOrganizerPlayerId, setTournamentOrganizerPlayerId] = useState<string | null>(null);
   const [tournamentJoinWinnerName, setTournamentJoinWinnerName] = useState<string | null>(null);
   const [bracketStartRound, setBracketStartRound] = useState(1);
+  const [activeGameSessionId, setActiveGameSessionId] = useState<string | null>(null);
+  const [liveGames, setLiveGames] = useState<LiveGameView[]>([]);
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -139,6 +144,26 @@ export default function GameApp({
       if (batchTimeoutRef.current) clearTimeout(batchTimeoutRef.current);
     };
   }, []);
+
+  // Polls for any live game across every device (tournament or not) so
+  // the Welcome screen can show a "Live Games" entry — only while it's
+  // actually the screen being shown, and hidden entirely when the list
+  // comes back empty.
+  useEffect(() => {
+    if (players || homeScreen !== "welcome") return;
+    let cancelled = false;
+    function poll() {
+      getLiveGames().then((games) => {
+        if (!cancelled) setLiveGames(games);
+      });
+    }
+    poll();
+    const interval = setInterval(poll, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [players, homeScreen]);
 
   function elapsedSecondsNow(): number {
     return gameStartedAt ? Math.max(0, Math.floor((Date.now() - gameStartedAt) / 1000)) : 0;
@@ -210,11 +235,12 @@ export default function GameApp({
   // change, plus every 10s as a backstop for long stretches (a slow turn)
   // where nothing else changes.
   useEffect(() => {
-    if (!players || !gameStartedAt) return;
+    if (!players || !gameStartedAt || !activeGameSessionId) return;
 
     function persist() {
       if (!activeGameRef.current) return;
       saveGameSnapshot({
+        activeGameSessionId: activeGameSessionId!,
         players: players!,
         damage,
         poison,
@@ -248,30 +274,35 @@ export default function GameApp({
     hasPassedOnce,
     roundNumber,
     gameStartedAt,
+    activeGameSessionId,
   ]);
 
   // Mirrors the local autosave above, but coarser (~20s) and pushed to the
-  // DB instead of localStorage — only relevant for a tournament pod, whose
-  // Live Results spectator page has nothing else to poll.
+  // DB instead of localStorage — every active game pushes here (so any
+  // device's "Live Games" list can see it), and a tournament pod also
+  // pushes the same snapshot to its own pod row for the round's Live
+  // Results view.
   useEffect(() => {
-    if (!tournamentPod || !players || !gameStartedAt) return;
+    if (!players || !gameStartedAt || !activeGameSessionId) return;
 
     function push() {
       if (!activeGameRef.current) return;
-      pushPodLiveSnapshot(tournamentPod!.podId, {
+      const snapshot = {
         players: players!.map((p) => ({ id: p.id, name: p.name, life: p.life, eliminated: p.eliminated })),
         damage,
         currentTurnPlayerId,
         elapsedSeconds: elapsedSecondsNow(),
         updatedAt: Date.now(),
-      }).catch(() => {});
+      };
+      pushActiveGameSnapshot(activeGameSessionId!, snapshot).catch(() => {});
+      if (tournamentPod) pushPodLiveSnapshot(tournamentPod.podId, snapshot).catch(() => {});
     }
 
     push();
     const interval = setInterval(push, LIVE_SNAPSHOT_PUSH_MS);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentPod, players, damage, gameStartedAt, currentTurnPlayerId]);
+  }, [tournamentPod, players, damage, gameStartedAt, currentTurnPlayerId, activeGameSessionId]);
 
   function nextTurnPlayerId(afterId: string): string | null {
     if (!players) return null;
@@ -353,6 +384,7 @@ export default function GameApp({
 
   function startGame(selections: PodSelection[], customRotations?: Rotation[]) {
     activeGameRef.current = true;
+    setActiveGameSessionId(crypto.randomUUID());
     const newPlayers = makePlayers(selections);
     setPlayers(newPlayers);
     setDamage(makeEmptyDamage(newPlayers));
@@ -488,7 +520,13 @@ export default function GameApp({
     } else {
       clearGameSnapshot();
       setActiveSnapshot(null);
+      // Only when the game truly won't resume (ended or abandoned) — a
+      // paused "Exit — Continue Later" keeps its live-games row until it
+      // ages out on its own, so a device that only briefly stepped away
+      // doesn't vanish from the list.
+      if (activeGameSessionId) endActiveGame(activeGameSessionId).catch(() => {});
     }
+    setActiveGameSessionId(null);
     setPlayers(null);
     setDamage({});
     setPoison({});
@@ -529,6 +567,7 @@ export default function GameApp({
     if (!players) return;
     flushPendingChanges();
     saveGameSnapshot({
+      activeGameSessionId: activeGameSessionId ?? crypto.randomUUID(),
       players,
       damage,
       poison,
@@ -550,6 +589,9 @@ export default function GameApp({
     const snapshot = activeSnapshot;
     if (!snapshot) return;
     activeGameRef.current = true;
+    // A snapshot saved before this field existed won't have it — fall
+    // back to a fresh id rather than pushing to an undefined row.
+    setActiveGameSessionId(snapshot.activeGameSessionId ?? crypto.randomUUID());
     setPlayers(snapshot.players);
     setDamage(snapshot.damage);
     setPoison(snapshot.poison);
@@ -709,6 +751,7 @@ export default function GameApp({
       if (tournamentPod) {
         await reportPodResult(tournamentPod.podId, gameId, winner.profileId);
       }
+      if (activeGameSessionId) endActiveGame(activeGameSessionId).catch(() => {});
       setShowEndGame(false);
       setVictoryFlourish(winner.name);
     } catch (e) {
@@ -795,6 +838,9 @@ export default function GameApp({
     if (homeScreen === "gameHistory") {
       return <GameHistoryScreen onBack={() => setHomeScreen("welcome")} />;
     }
+    if (homeScreen === "liveGames") {
+      return <LiveGamesScreen initial={liveGames} onBack={() => setHomeScreen("welcome")} />;
+    }
     return (
       <>
         <WelcomeScreen
@@ -811,6 +857,8 @@ export default function GameApp({
           onStats={() => setHomeScreen("stats")}
           onGameHistory={() => setHomeScreen("gameHistory")}
           onTournament={() => setHomeScreen("tournamentSetup")}
+          liveGamesCount={liveGames.length}
+          onViewLiveGames={() => setHomeScreen("liveGames")}
         />
         {showEraseActiveGameConfirm && (
           <ConfirmModal

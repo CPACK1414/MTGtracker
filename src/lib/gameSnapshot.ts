@@ -7,6 +7,11 @@ const STORAGE_KEY = "mtg-tracker:active-game:v1";
 
 export type GameSnapshot = {
   version: 1;
+  // Identifies this game's row in the `active_games` table across a
+  // refresh/continue — generated once when the game starts, not per
+  // save, so "Live Games" keeps tracking the same row instead of
+  // forking a new one every time the snapshot is persisted.
+  activeGameSessionId: string;
   players: Player[];
   damage: Record<string, Record<string, number>>;
   poison: Record<string, number>;

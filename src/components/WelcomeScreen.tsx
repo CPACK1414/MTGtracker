@@ -10,6 +10,8 @@ export default function WelcomeScreen({
   onStats,
   onGameHistory,
   onTournament,
+  liveGamesCount,
+  onViewLiveGames,
 }: {
   activeGameSummary?: string | null;
   onContinueGame?: () => void;
@@ -18,6 +20,8 @@ export default function WelcomeScreen({
   onStats: () => void;
   onGameHistory: () => void;
   onTournament: () => void;
+  liveGamesCount: number;
+  onViewLiveGames: () => void;
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-10 text-center">
@@ -27,6 +31,20 @@ export default function WelcomeScreen({
       </div>
 
       <div className="flex w-full max-w-sm flex-col gap-3">
+        {liveGamesCount > 0 && (
+          <button
+            onClick={onViewLiveGames}
+            className="flex items-center gap-3 rounded-2xl bg-red-500/15 px-5 py-3 text-left ring-1 ring-red-500/40 active:scale-95"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center text-xl">🔴</span>
+            <span>
+              <span className="block text-base font-bold text-white">Live Games</span>
+              <span className="block text-xs text-red-300/80">
+                {liveGamesCount} game{liveGamesCount === 1 ? "" : "s"} in progress — tap to watch
+              </span>
+            </span>
+          </button>
+        )}
         {activeGameSummary && onContinueGame && (
           <button
             onClick={onContinueGame}
