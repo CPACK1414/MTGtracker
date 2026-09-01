@@ -17,7 +17,7 @@ export default function TableSetupScreen({
   onAddDeck,
 }: {
   players: PlayerProfile[];
-  onBack: () => void;
+  onBack?: () => void;
   onStart: (ordered: PodSelection[], rotations: Rotation[]) => void;
   onAddDeck: (
     playerId: string,
@@ -139,9 +139,13 @@ export default function TableSetupScreen({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3">
-        <button onClick={onBack} className="text-sm font-semibold text-neutral-400">
-          ← Back
-        </button>
+        {onBack ? (
+          <button onClick={onBack} className="text-sm font-semibold text-neutral-400">
+            ← Back
+          </button>
+        ) : (
+          <span className="w-12" />
+        )}
         <h1 className="text-base font-bold text-white">Set Up Table</h1>
         <span className="w-12" />
       </header>

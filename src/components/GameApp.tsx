@@ -12,10 +12,22 @@ import {
   type EliminationReason,
 } from "@/lib/types";
 import type { PlayerProfile } from "@/lib/library";
-import { saveGame, type GameEventInput } from "@/app/actions";
+import { createDeck, saveGame, type GameEventInput } from "@/app/actions";
+import {
+  createTournament,
+  markPodStarted,
+  pushPodLiveSnapshot,
+  reportPodResult,
+  type TournamentPodView,
+} from "@/app/tournamentActions";
 import { getLayoutTemplate, getValidRotations, gridTemplateAreas, type Rotation } from "@/lib/layout";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import PodSetupScreen from "@/components/PodSetupScreen";
+import TableSetupScreen from "@/components/TableSetupScreen";
+import TournamentSetupScreen from "@/components/TournamentSetupScreen";
+import TournamentShareLinksScreen from "@/components/TournamentShareLinksScreen";
+import TournamentBracketScreen from "@/components/TournamentBracketScreen";
+import TournamentJoinCompleteScreen from "@/components/TournamentJoinCompleteScreen";
 import PlayerLibraryScreen from "@/components/PlayerLibraryScreen";
 import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
@@ -38,13 +50,38 @@ import {
   type GameSnapshot,
 } from "@/lib/gameSnapshot";
 
-type HomeScreen = "welcome" | "newGame" | "library" | "stats" | "gameHistory";
+type HomeScreen =
+  | "welcome"
+  | "newGame"
+  | "library"
+  | "stats"
+  | "gameHistory"
+  | "tournamentSetup"
+  | "tournamentShareLinks"
+  | "tournamentBracket"
+  | "tournamentJoinComplete";
 type CounterMap = Record<string, number>;
 type PendingChange = { life: number; commanderDamage: number; poison: number; radiation: number };
 
-const CHANGE_BATCH_WINDOW_MS = 10000;
+export type TournamentPodContext = {
+  podId: string;
+  tournamentId: string;
+  organizerPlayerId: string;
+  round: number;
+  mode: "join" | "organizer";
+  players: PlayerProfile[];
+};
 
-export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProfile[] }) {
+const CHANGE_BATCH_WINDOW_MS = 10000;
+const LIVE_SNAPSHOT_PUSH_MS = 20000;
+
+export default function GameApp({
+  initialPlayers,
+  initialTournamentPod,
+}: {
+  initialPlayers: PlayerProfile[];
+  initialTournamentPod?: TournamentPodContext;
+}) {
   const [libraryPlayers, setLibraryPlayers] = useState<PlayerProfile[]>(initialPlayers);
   const [players, setPlayers] = useState<Player[] | null>(null);
   useWakeLock(Boolean(players));
@@ -80,6 +117,13 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   const [showEraseActiveGameConfirm, setShowEraseActiveGameConfirm] = useState(false);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const [victoryFlourish, setVictoryFlourish] = useState<string | null>(null);
+  const [tournamentPod, setTournamentPod] = useState<TournamentPodContext | null>(
+    initialTournamentPod ?? null
+  );
+  const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
+  const [tournamentOrganizerPlayerId, setTournamentOrganizerPlayerId] = useState<string | null>(null);
+  const [tournamentJoinWinnerName, setTournamentJoinWinnerName] = useState<string | null>(null);
+  const [bracketStartRound, setBracketStartRound] = useState(1);
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -206,6 +250,29 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     gameStartedAt,
   ]);
 
+  // Mirrors the local autosave above, but coarser (~20s) and pushed to the
+  // DB instead of localStorage — only relevant for a tournament pod, whose
+  // Live Results spectator page has nothing else to poll.
+  useEffect(() => {
+    if (!tournamentPod || !players || !gameStartedAt) return;
+
+    function push() {
+      if (!activeGameRef.current) return;
+      pushPodLiveSnapshot(tournamentPod!.podId, {
+        players: players!.map((p) => ({ id: p.id, name: p.name, life: p.life, eliminated: p.eliminated })),
+        damage,
+        currentTurnPlayerId,
+        elapsedSeconds: elapsedSecondsNow(),
+        updatedAt: Date.now(),
+      }).catch(() => {});
+    }
+
+    push();
+    const interval = setInterval(push, LIVE_SNAPSHOT_PUSH_MS);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentPod, players, damage, gameStartedAt, currentTurnPlayerId]);
+
   function nextTurnPlayerId(afterId: string): string | null {
     if (!players) return null;
     const idx = players.findIndex((p) => p.id === afterId);
@@ -314,6 +381,62 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
     pendingChangesRef.current = {};
     pendingWindowStartRef.current = null;
     eventsRef.current = [];
+  }
+
+  function startTournamentPodGame(selections: PodSelection[], customRotations?: Rotation[]) {
+    if (tournamentPod) markPodStarted(tournamentPod.podId).catch(() => {});
+    startGame(selections, customRotations);
+  }
+
+  function addDeckForTournamentPod(
+    playerId: string,
+    name: string,
+    commander: string,
+    colors: string,
+    artCropUrl: string | null,
+    flavorText: string | null
+  ) {
+    return createDeck(playerId, name, commander, colors, artCropUrl, flavorText).then((deck) => {
+      setTournamentPod((prev) =>
+        prev
+          ? {
+              ...prev,
+              players: prev.players.map((p) =>
+                p.id === playerId
+                  ? { ...p, decks: [...p.decks, { ...deck, gamesPlayed: 0, wins: 0 }] }
+                  : p
+              ),
+            }
+          : prev
+      );
+      return deck;
+    });
+  }
+
+  async function handleCreateTournament(
+    organizerPlayerId: string,
+    rosterPlayerIds: string[],
+    podSize: number
+  ) {
+    const state = await createTournament(organizerPlayerId, rosterPlayerIds, podSize);
+    setActiveTournamentId(state.id);
+    setTournamentOrganizerPlayerId(organizerPlayerId);
+    setHomeScreen("tournamentShareLinks");
+  }
+
+  function startOwnTournamentPod(pod: TournamentPodView) {
+    if (!activeTournamentId || !tournamentOrganizerPlayerId) return;
+    const podPlayers = pod.participants
+      .map((participant) => libraryPlayers.find((p) => p.id === participant.playerId))
+      .filter((p): p is PlayerProfile => Boolean(p));
+    setTournamentPod({
+      podId: pod.id,
+      tournamentId: activeTournamentId,
+      organizerPlayerId: tournamentOrganizerPlayerId,
+      round: pod.round,
+      mode: "organizer",
+      players: podPlayers,
+    });
   }
 
   function restartGame() {
@@ -566,7 +689,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         ? Math.max(0, Math.floor((Date.now() - gameStartedAt) / 1000))
         : 0;
       flushPendingChanges();
-      await saveGame({
+      const { id: gameId } = await saveGame({
         podSize: players.length,
         durationSeconds,
         winnerPlayerId: winner.profileId,
@@ -583,6 +706,9 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         damage: damageRows,
         events: eventsRef.current,
       });
+      if (tournamentPod) {
+        await reportPodResult(tournamentPod.podId, gameId, winner.profileId);
+      }
       setShowEndGame(false);
       setVictoryFlourish(winner.name);
     } catch (e) {
@@ -598,6 +724,51 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   );
 
   if (!players) {
+    if (tournamentPod) {
+      return (
+        <TableSetupScreen
+          players={tournamentPod.players}
+          onBack={tournamentPod.mode === "organizer" ? () => setTournamentPod(null) : undefined}
+          onStart={startTournamentPodGame}
+          onAddDeck={addDeckForTournamentPod}
+        />
+      );
+    }
+    if (homeScreen === "tournamentSetup") {
+      return (
+        <TournamentSetupScreen
+          players={sortedLibraryPlayers}
+          onBack={() => setHomeScreen("welcome")}
+          onCreate={handleCreateTournament}
+        />
+      );
+    }
+    if (homeScreen === "tournamentShareLinks" && activeTournamentId) {
+      return (
+        <TournamentShareLinksScreen
+          tournamentId={activeTournamentId}
+          onStartOwnPod={startOwnTournamentPod}
+        />
+      );
+    }
+    if (homeScreen === "tournamentBracket" && activeTournamentId) {
+      return (
+        <TournamentBracketScreen
+          tournamentId={activeTournamentId}
+          startRound={bracketStartRound}
+          libraryPlayers={sortedLibraryPlayers}
+          onAdvancedRound={() => setHomeScreen("tournamentShareLinks")}
+          onDone={() => {
+            setActiveTournamentId(null);
+            setTournamentOrganizerPlayerId(null);
+            setHomeScreen("welcome");
+          }}
+        />
+      );
+    }
+    if (homeScreen === "tournamentJoinComplete") {
+      return <TournamentJoinCompleteScreen winnerName={tournamentJoinWinnerName} />;
+    }
     if (homeScreen === "newGame") {
       return (
         <PodSetupScreen
@@ -639,6 +810,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           onLibrary={() => setHomeScreen("library")}
           onStats={() => setHomeScreen("stats")}
           onGameHistory={() => setHomeScreen("gameHistory")}
+          onTournament={() => setHomeScreen("tournamentSetup")}
         />
         {showEraseActiveGameConfirm && (
           <ConfirmModal
@@ -849,8 +1021,18 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         <VictoryFlourish
           winnerName={victoryFlourish}
           onMainMenu={() => {
+            const finishedPod = tournamentPod;
             setVictoryFlourish(null);
             resetToSetup(false);
+            if (finishedPod?.mode === "join") {
+              setTournamentJoinWinnerName(victoryFlourish);
+              setTournamentPod(null);
+              setHomeScreen("tournamentJoinComplete");
+            } else if (finishedPod?.mode === "organizer") {
+              setTournamentPod(null);
+              setBracketStartRound(finishedPod.round);
+              setHomeScreen("tournamentBracket");
+            }
           }}
         />
       )}

@@ -9,6 +9,7 @@ export default function WelcomeScreen({
   onLibrary,
   onStats,
   onGameHistory,
+  onTournament,
 }: {
   activeGameSummary?: string | null;
   onContinueGame?: () => void;
@@ -16,6 +17,7 @@ export default function WelcomeScreen({
   onLibrary: () => void;
   onStats: () => void;
   onGameHistory: () => void;
+  onTournament: () => void;
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-10 text-center">
@@ -54,6 +56,19 @@ export default function WelcomeScreen({
             <span className="block text-lg font-bold text-white">New Game</span>
             <span className="block text-sm text-emerald-950/70">
               Pick players and start a pod
+            </span>
+          </span>
+        </button>
+
+        <button
+          onClick={onTournament}
+          className="flex items-center gap-4 rounded-2xl bg-neutral-800 px-6 py-5 text-left active:scale-95"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-3xl">🏆</span>
+          <span>
+            <span className="block text-lg font-bold text-white">Tournament</span>
+            <span className="block text-sm text-neutral-400">
+              Bracket play across multiple phones
             </span>
           </span>
         </button>

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, uniqueIndex, boolean, jsonb } from "drizzle-orm/pg-core";
 
 export const players = pgTable("players", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -93,4 +93,49 @@ export const commanderDamage = pgTable("commander_damage", {
     .notNull()
     .references(() => players.id),
   amount: integer("amount").notNull().default(0),
+});
+
+export const tournaments = pgTable("tournaments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizerPlayerId: uuid("organizer_player_id")
+    .notNull()
+    .references(() => players.id),
+  podSize: integer("pod_size").notNull(),
+  currentRound: integer("current_round").notNull().default(1),
+  status: text("status").notNull().default("in_progress"),
+  winnerPlayerId: uuid("winner_player_id").references(() => players.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const tournamentPods = pgTable("tournament_pods", {
+  // This id doubles as the share token (/t/[token] resolves straight to
+  // this PK) — an unguessable uuid link matches the app's existing no-auth
+  // sharing model, so there's no need for a separate token column.
+  id: uuid("id").primaryKey().defaultRandom(),
+  tournamentId: uuid("tournament_id")
+    .notNull()
+    .references(() => tournaments.id, { onDelete: "cascade" }),
+  round: integer("round").notNull(),
+  podIndex: integer("pod_index").notNull(),
+  isOrganizerPod: boolean("is_organizer_pod").notNull().default(false),
+  isAutoAdvance: boolean("is_auto_advance").notNull().default(false),
+  sharedAt: timestamp("shared_at", { withTimezone: true }),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  gameId: uuid("game_id").references(() => games.id),
+  winnerPlayerId: uuid("winner_player_id").references(() => players.id),
+  liveSnapshot: jsonb("live_snapshot"),
+  liveSnapshotUpdatedAt: timestamp("live_snapshot_updated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const tournamentPodParticipants = pgTable("tournament_pod_participants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  podId: uuid("pod_id")
+    .notNull()
+    .references(() => tournamentPods.id, { onDelete: "cascade" }),
+  playerId: uuid("player_id")
+    .notNull()
+    .references(() => players.id),
+  seatOrder: integer("seat_order").notNull(),
 });
