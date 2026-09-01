@@ -42,16 +42,32 @@ async function ensureUniqueNames(
 }
 
 export async function getPlayersWithDecks(): Promise<PlayerProfile[]> {
-  const [allPlayers, allDecks, allParticipants] = await Promise.all([
+  const [allPlayers, allDecks, allParticipants, allGames] = await Promise.all([
     db.select().from(players).orderBy(players.createdAt),
     db.select().from(decks).orderBy(decks.createdAt),
     db.select().from(gameParticipants),
+    db.select().from(games),
   ]);
 
-  const decksByPlayer = new Map<string, Deck[]>();
+  const deckGamesPlayed = new Map<string, number>();
+  const deckWins = new Map<string, number>();
+  for (const gp of allParticipants) {
+    if (!gp.deckId) continue;
+    deckGamesPlayed.set(gp.deckId, (deckGamesPlayed.get(gp.deckId) ?? 0) + 1);
+  }
+  for (const g of allGames) {
+    if (!g.winnerDeckId) continue;
+    deckWins.set(g.winnerDeckId, (deckWins.get(g.winnerDeckId) ?? 0) + 1);
+  }
+
+  const decksByPlayer = new Map<string, PlayerProfile["decks"]>();
   for (const d of allDecks) {
     const list = decksByPlayer.get(d.playerId) ?? [];
-    list.push(d);
+    list.push({
+      ...d,
+      gamesPlayed: deckGamesPlayed.get(d.id) ?? 0,
+      wins: deckWins.get(d.id) ?? 0,
+    });
     decksByPlayer.set(d.playerId, list);
   }
 
@@ -118,7 +134,8 @@ export async function createDeck(
   name: string,
   commander: string,
   colors: string,
-  artCropUrl?: string | null
+  artCropUrl?: string | null,
+  flavorText?: string | null
 ): Promise<Deck> {
   const [deck] = await db
     .insert(decks)
@@ -128,6 +145,7 @@ export async function createDeck(
       commander: commander || null,
       colors: colors || null,
       artCropUrl: artCropUrl || null,
+      flavorText: flavorText || null,
     })
     .returning();
   return deck;
@@ -138,7 +156,8 @@ export async function updateDeck(
   name: string,
   commander: string,
   colors: string,
-  artCropUrl?: string | null
+  artCropUrl?: string | null,
+  flavorText?: string | null
 ): Promise<void> {
   await db
     .update(decks)
@@ -147,6 +166,7 @@ export async function updateDeck(
       commander: commander || null,
       colors: colors || null,
       artCropUrl: artCropUrl || null,
+      flavorText: flavorText || null,
     })
     .where(eq(decks.id, deckId));
 }
@@ -157,6 +177,76 @@ export async function deleteDeck(deckId: string): Promise<void> {
   } catch (e) {
     friendlyDbError(e, "deck");
   }
+}
+
+export type DeckPodMatchup = {
+  // This deck's record specifically in games where the seated player group
+  // (the exact set of players at the table right now) played together
+  // before — null if that exact group has never played a recorded game.
+  podRecord: { wins: number; losses: number } | null;
+  // This deck's record against each other deck currently seated, counting
+  // any past game where both decks were present (regardless of pod size or
+  // who else was at that table).
+  vsDecks: { deckId: string; deckName: string; commander: string | null; wins: number; losses: number }[];
+};
+
+export async function getDeckPodMatchup(
+  deckId: string,
+  podPlayerIds: string[],
+  opponentDeckIds: string[]
+): Promise<DeckPodMatchup> {
+  const [allGames, allParticipants, opponentDecks] = await Promise.all([
+    db.select().from(games),
+    db.select().from(gameParticipants),
+    opponentDeckIds.length > 0 ? db.select().from(decks).where(inArray(decks.id, opponentDeckIds)) : [],
+  ]);
+
+  const participantsByGame = new Map<string, typeof allParticipants>();
+  for (const gp of allParticipants) {
+    const list = participantsByGame.get(gp.gameId) ?? [];
+    list.push(gp);
+    participantsByGame.set(gp.gameId, list);
+  }
+
+  const sortedPodKey = [...podPlayerIds].sort().join("|");
+  let podWins = 0;
+  let podLosses = 0;
+  let podGamesFound = false;
+
+  for (const game of allGames) {
+    const participants = participantsByGame.get(game.id) ?? [];
+    const thisDeckParticipant = participants.find((p) => p.deckId === deckId);
+    if (!thisDeckParticipant) continue;
+
+    const gamePlayerKey = participants
+      .map((p) => p.playerId)
+      .sort()
+      .join("|");
+    if (gamePlayerKey !== sortedPodKey) continue;
+
+    podGamesFound = true;
+    if (game.winnerDeckId === deckId) podWins++;
+    else podLosses++;
+  }
+
+  const vsDecks = opponentDecks.map((od) => {
+    let wins = 0;
+    let losses = 0;
+    for (const game of allGames) {
+      const participants = participantsByGame.get(game.id) ?? [];
+      const hasThis = participants.some((p) => p.deckId === deckId);
+      const hasOpp = participants.some((p) => p.deckId === od.id);
+      if (!hasThis || !hasOpp) continue;
+      if (game.winnerDeckId === deckId) wins++;
+      else losses++;
+    }
+    return { deckId: od.id, deckName: od.name, commander: od.commander, wins, losses };
+  });
+
+  return {
+    podRecord: podGamesFound ? { wins: podWins, losses: podLosses } : null,
+    vsDecks,
+  };
 }
 
 export type GameEventInput = {

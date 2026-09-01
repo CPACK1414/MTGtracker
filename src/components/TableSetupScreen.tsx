@@ -7,6 +7,8 @@ import type { PodSelection } from "@/lib/types";
 import RotatableCard from "@/components/RotatableCard";
 import ColorPips from "@/components/ColorPips";
 import DeckForm from "@/components/DeckForm";
+import DeckInfoModal from "@/components/DeckInfoModal";
+import { ordinal } from "@/lib/format";
 
 export default function TableSetupScreen({
   players,
@@ -22,7 +24,8 @@ export default function TableSetupScreen({
     name: string,
     commander: string,
     colors: string,
-    artCropUrl: string | null
+    artCropUrl: string | null,
+    flavorText: string | null
   ) => Promise<Deck>;
 }) {
   const template = getLayoutTemplate(players.length);
@@ -36,6 +39,7 @@ export default function TableSetupScreen({
   const [rotations, setRotations] = useState<Rotation[]>(() =>
     template.placements.map((p) => p.rotation)
   );
+  const [showInfoAt, setShowInfoAt] = useState<boolean[]>(() => players.map(() => false));
 
   useEffect(() => {
     if (players.length > 0 && seatReady.length === players.length && seatReady.every(Boolean)) {
@@ -85,9 +89,10 @@ export default function TableSetupScreen({
     name: string,
     commander: string,
     colors: string,
-    artCropUrl: string | null
+    artCropUrl: string | null,
+    flavorText: string | null
   ) {
-    onAddDeck(playerId, name, commander, colors, artCropUrl).then((deck) => {
+    onAddDeck(playerId, name, commander, colors, artCropUrl, flavorText).then((deck) => {
       setAt(setSeatDeckId, seatIndex, deck.id);
       setAt(setAddingDeckAt, seatIndex, false);
     });
@@ -158,7 +163,7 @@ export default function TableSetupScreen({
           return (
             <RotatableCard key={i} rotation={rotations[i]} style={{ gridArea: placement.area }}>
               <div
-                className={`flex h-full w-full flex-col gap-2 rounded-2xl bg-cover bg-center p-3 transition-colors ${
+                className={`relative flex h-full w-full flex-col gap-2 rounded-2xl bg-cover bg-center p-3 transition-colors ${
                   seatReady[i]
                     ? "ready-glow border-2 border-emerald-500 bg-neutral-900"
                     : "border border-neutral-800 bg-neutral-900"
@@ -231,8 +236,8 @@ export default function TableSetupScreen({
                       {addingDeckAt[i] ? (
                         <DeckForm
                           onCancel={() => setAt(setAddingDeckAt, i, false)}
-                          onSave={(name, commander, colors, artCropUrl) =>
-                            saveNewDeck(i, player.id, name, commander, colors, artCropUrl)
+                          onSave={(name, commander, colors, artCropUrl, flavorText) =>
+                            saveNewDeck(i, player.id, name, commander, colors, artCropUrl, flavorText)
                           }
                         />
                       ) : (
@@ -266,9 +271,32 @@ export default function TableSetupScreen({
                   ) : (
                     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="max-w-[80%] truncate text-sm text-neutral-300">{deck.name}</span>
+                        <span className="max-w-[65%] truncate text-sm text-neutral-300">{deck.name}</span>
                         <ColorPips colors={deck.colors} />
+                        <button
+                          onClick={() => setAt(setShowInfoAt, i, true)}
+                          aria-label="Deck info"
+                          className="shrink-0 rounded-full bg-blue-500/20 px-2 py-0.5 text-[11px] font-bold text-blue-300 active:scale-95"
+                        >
+                          ⓘ
+                        </button>
                       </div>
+                      {players.length === 2 && (
+                        <div className="w-full text-center">
+                          {deck.flavorText && (
+                            <p className="truncate text-[11px] italic text-neutral-500">
+                              {deck.flavorText}
+                            </p>
+                          )}
+                          <p className="mt-0.5 text-[11px] font-semibold text-emerald-400">
+                            {deck.gamesPlayed > 0
+                              ? `${ordinal(deck.gamesPlayed + 1)} time this commander's hit the table — ${
+                                  deck.wins
+                                }-${deck.gamesPlayed - deck.wins} record`
+                              : "First time this commander's hit the table"}
+                          </p>
+                        </div>
+                      )}
                       {seatReady[i] ? (
                         <>
                           <p className="w-full text-center text-xs font-semibold text-emerald-300">
@@ -297,6 +325,17 @@ export default function TableSetupScreen({
                     </div>
                   )}
                 </div>
+
+                {showInfoAt[i] && deck && (
+                  <DeckInfoModal
+                    deck={deck}
+                    podPlayerIds={players.map((p) => p.id)}
+                    opponentDeckIds={seatDeckId.filter(
+                      (id, idx): id is string => idx !== i && id !== null
+                    )}
+                    onClose={() => setAt(setShowInfoAt, i, false)}
+                  />
+                )}
               </div>
             </RotatableCard>
           );

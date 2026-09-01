@@ -87,11 +87,14 @@ export default function PlayerLibraryScreen({
     name: string,
     commander: string,
     colors: string,
-    artCropUrl: string | null
+    artCropUrl: string | null,
+    flavorText: string | null
   ) {
-    const deck = await createDeck(playerId, name, commander, colors, artCropUrl);
+    const deck = await createDeck(playerId, name, commander, colors, artCropUrl, flavorText);
     onChangePlayers((prev) =>
-      prev.map((p) => (p.id === playerId ? { ...p, decks: [...p.decks, deck] } : p))
+      prev.map((p) =>
+        p.id === playerId ? { ...p, decks: [...p.decks, { ...deck, gamesPlayed: 0, wins: 0 }] } : p
+      )
     );
   }
 
@@ -101,7 +104,8 @@ export default function PlayerLibraryScreen({
     name: string,
     commander: string,
     colors: string,
-    artCropUrl: string | null
+    artCropUrl: string | null,
+    flavorText: string | null
   ) {
     onChangePlayers((prev) =>
       prev.map((p) =>
@@ -116,6 +120,7 @@ export default function PlayerLibraryScreen({
                       commander: commander || null,
                       colors: colors || null,
                       artCropUrl: artCropUrl || null,
+                      flavorText: flavorText || null,
                     }
                   : d
               ),
@@ -124,7 +129,7 @@ export default function PlayerLibraryScreen({
       )
     );
     startTransition(() => {
-      updateDeck(deckId, name, commander, colors, artCropUrl);
+      updateDeck(deckId, name, commander, colors, artCropUrl, flavorText);
     });
   }
 
@@ -189,11 +194,11 @@ export default function PlayerLibraryScreen({
               player={p}
               onRename={(name, screenName, email) => handleRename(p.id, name, screenName, email)}
               onDelete={() => removePlayer(p.id)}
-              onAddDeck={(name, commander, colors, artCropUrl) =>
-                addDeck(p.id, name, commander, colors, artCropUrl)
+              onAddDeck={(name, commander, colors, artCropUrl, flavorText) =>
+                addDeck(p.id, name, commander, colors, artCropUrl, flavorText)
               }
-              onEditDeck={(deckId, name, commander, colors, artCropUrl) =>
-                editDeck(p.id, deckId, name, commander, colors, artCropUrl)
+              onEditDeck={(deckId, name, commander, colors, artCropUrl, flavorText) =>
+                editDeck(p.id, deckId, name, commander, colors, artCropUrl, flavorText)
               }
               onRemoveDeck={(deckId) => removeDeck(p.id, deckId)}
             />

@@ -34,11 +34,14 @@ export default function PodSetupScreen({
     name: string,
     commander: string,
     colors: string,
-    artCropUrl: string | null
+    artCropUrl: string | null,
+    flavorText: string | null
   ): Promise<Deck> {
-    const deck = await createDeck(playerId, name, commander, colors, artCropUrl);
+    const deck = await createDeck(playerId, name, commander, colors, artCropUrl, flavorText);
     onChangePlayers((prev) =>
-      prev.map((p) => (p.id === playerId ? { ...p, decks: [...p.decks, deck] } : p))
+      prev.map((p) =>
+        p.id === playerId ? { ...p, decks: [...p.decks, { ...deck, gamesPlayed: 0, wins: 0 }] } : p
+      )
     );
     return deck;
   }

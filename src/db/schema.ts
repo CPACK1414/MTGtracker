@@ -18,6 +18,7 @@ export const decks = pgTable("decks", {
   colors: text("colors"),
   moxfieldUrl: text("moxfield_url"),
   artCropUrl: text("art_crop_url"),
+  flavorText: text("flavor_text"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

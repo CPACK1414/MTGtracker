@@ -4,17 +4,27 @@ import { useEffect, useRef, useState } from "react";
 
 const WUBRG_ORDER = ["W", "U", "B", "R", "G"];
 
-type Suggestion = { name: string; colorIdentity: string[]; artCropUrl: string | null };
+type Suggestion = {
+  name: string;
+  colorIdentity: string[];
+  artCropUrl: string | null;
+  flavorText: string | null;
+};
 
 type ScryfallCard = {
   name: string;
   color_identity?: string[];
   image_uris?: { art_crop?: string };
-  card_faces?: { image_uris?: { art_crop?: string } }[];
+  flavor_text?: string;
+  card_faces?: { image_uris?: { art_crop?: string }; flavor_text?: string }[];
 };
 
 function artCropOf(c: ScryfallCard): string | null {
   return c.image_uris?.art_crop ?? c.card_faces?.[0]?.image_uris?.art_crop ?? null;
+}
+
+function flavorTextOf(c: ScryfallCard): string | null {
+  return c.flavor_text ?? c.card_faces?.[0]?.flavor_text ?? null;
 }
 
 export default function CommanderInput({
@@ -22,12 +32,14 @@ export default function CommanderInput({
   onChange,
   onPickColors,
   onPickArt,
+  onPickFlavorText,
   autoFocus,
 }: {
   value: string;
   onChange: (value: string) => void;
   onPickColors: (colors: string) => void;
   onPickArt: (artCropUrl: string | null) => void;
+  onPickFlavorText: (flavorText: string | null) => void;
   autoFocus?: boolean;
 }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -76,6 +88,7 @@ export default function CommanderInput({
             name: c.name,
             colorIdentity: c.color_identity ?? [],
             artCropUrl: artCropOf(c),
+            flavorText: flavorTextOf(c),
           }))
         );
       } catch (e) {
@@ -88,6 +101,7 @@ export default function CommanderInput({
     onChange(s.name);
     onPickColors(WUBRG_ORDER.filter((c) => s.colorIdentity.includes(c)).join(""));
     onPickArt(s.artCropUrl);
+    onPickFlavorText(s.flavorText);
     setSuggestions([]);
     setOpen(false);
   }

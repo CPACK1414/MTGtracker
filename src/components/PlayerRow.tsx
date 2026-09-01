@@ -16,13 +16,20 @@ export default function PlayerRow({
   player: PlayerProfile;
   onRename: (name: string, screenName: string | null, email: string | null) => Promise<void>;
   onDelete: () => void;
-  onAddDeck: (name: string, commander: string, colors: string, artCropUrl: string | null) => void;
+  onAddDeck: (
+    name: string,
+    commander: string,
+    colors: string,
+    artCropUrl: string | null,
+    flavorText: string | null
+  ) => void;
   onEditDeck: (
     deckId: string,
     name: string,
     commander: string,
     colors: string,
-    artCropUrl: string | null
+    artCropUrl: string | null,
+    flavorText: string | null
   ) => void;
   onRemoveDeck: (deckId: string) => void;
 }) {
@@ -173,8 +180,8 @@ export default function PlayerRow({
                 key={deck.id}
                 initial={deck}
                 onCancel={() => setEditingDeckId(null)}
-                onSave={(name, commander, colors, artCropUrl) => {
-                  onEditDeck(deck.id, name, commander, colors, artCropUrl);
+                onSave={(name, commander, colors, artCropUrl, flavorText) => {
+                  onEditDeck(deck.id, name, commander, colors, artCropUrl, flavorText);
                   setEditingDeckId(null);
                 }}
               />
@@ -191,8 +198,8 @@ export default function PlayerRow({
           {addingDeck ? (
             <DeckForm
               onCancel={() => setAddingDeck(false)}
-              onSave={(name, commander, colors, artCropUrl) => {
-                onAddDeck(name, commander, colors, artCropUrl);
+              onSave={(name, commander, colors, artCropUrl, flavorText) => {
+                onAddDeck(name, commander, colors, artCropUrl, flavorText);
                 setAddingDeck(false);
               }}
             />
