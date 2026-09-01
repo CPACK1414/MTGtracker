@@ -10,6 +10,12 @@ import { players } from "@/db/schema";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Passed explicitly rather than relying on Auth.js's env-var
+  // auto-inference (AUTH_SECRET/AUTH_GOOGLE_ID/etc.) — that inference
+  // wasn't picking up AUTH_SECRET reliably in this setup (confirmed via
+  // a MissingSecret error in production logs despite the var being set),
+  // so every value here is read from process.env explicitly instead.
+  secret: process.env.AUTH_SECRET,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
