@@ -104,12 +104,12 @@ body {
    box, not the actual transparent-PNG shape). */
 .skull-outline {
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6))
-    drop-shadow(0.75px 0 0 rgba(255, 255, 255, 0.2)) drop-shadow(-0.75px 0 0 rgba(255, 255, 255, 0.2))
-    drop-shadow(0 0.75px 0 rgba(255, 255, 255, 0.2)) drop-shadow(0 -0.75px 0 rgba(255, 255, 255, 0.2))
-    drop-shadow(0.5px 0.5px 0 rgba(255, 255, 255, 0.2))
-    drop-shadow(-0.5px 0.5px 0 rgba(255, 255, 255, 0.2))
-    drop-shadow(0.5px -0.5px 0 rgba(255, 255, 255, 0.2))
-    drop-shadow(-0.5px -0.5px 0 rgba(255, 255, 255, 0.2));
+    drop-shadow(1.25px 0 0 rgba(255, 255, 255, 0.55)) drop-shadow(-1.25px 0 0 rgba(255, 255, 255, 0.55))
+    drop-shadow(0 1.25px 0 rgba(255, 255, 255, 0.55)) drop-shadow(0 -1.25px 0 rgba(255, 255, 255, 0.55))
+    drop-shadow(0.9px 0.9px 0 rgba(255, 255, 255, 0.55))
+    drop-shadow(-0.9px 0.9px 0 rgba(255, 255, 255, 0.55))
+    drop-shadow(0.9px -0.9px 0 rgba(255, 255, 255, 0.55))
+    drop-shadow(-0.9px -0.9px 0 rgba(255, 255, 255, 0.55));
 }
 
 @keyframes confetti-fall {
