@@ -52,6 +52,107 @@ body {
   animation: ready-pulse 1.6s ease-in-out infinite;
 }
 
+@keyframes low-life-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.06);
+  }
+}
+
+.low-life-pulse {
+  animation-name: low-life-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes elimination-flourish {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.elimination-flourish {
+  animation: elimination-flourish 0.6s ease-out forwards, skull-pulse 2.4s ease-in-out 0.6s infinite;
+}
+
+@keyframes skull-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* Stacks a drop-shadow in every direction to fake a stroked outline around
+   the skull's silhouette (a plain CSS border only affects the bounding
+   box, not the actual transparent-PNG shape). */
+.skull-outline {
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6))
+    drop-shadow(0.75px 0 0 rgba(255, 255, 255, 0.2)) drop-shadow(-0.75px 0 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0 0.75px 0 rgba(255, 255, 255, 0.2)) drop-shadow(0 -0.75px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0.5px 0.5px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(-0.5px 0.5px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0.5px -0.5px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(-0.5px -0.5px 0 rgba(255, 255, 255, 0.2));
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes victory-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.victory-pop {
+  animation: victory-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    trophy-pulse 2s ease-in-out 0.5s infinite;
+}
+
+@keyframes trophy-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
 /* Expands the tappable area beyond the visible button box (mostly
    vertically, since the header row has spare padding there) without
    changing how big the button looks. */

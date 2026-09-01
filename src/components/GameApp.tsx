@@ -21,6 +21,7 @@ import PlayerCard, { type OpponentDamage } from "@/components/PlayerCard";
 import RotatableCard from "@/components/RotatableCard";
 import FirstPlayerRandomizer from "@/components/FirstPlayerRandomizer";
 import EndGameModal from "@/components/EndGameModal";
+import VictoryFlourish from "@/components/VictoryFlourish";
 import ConfirmModal from "@/components/ConfirmModal";
 import CounterModal from "@/components/CounterModal";
 import EliminationModal from "@/components/EliminationModal";
@@ -78,6 +79,7 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
   );
   const [showEraseActiveGameConfirm, setShowEraseActiveGameConfirm] = useState(false);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+  const [victoryFlourish, setVictoryFlourish] = useState<string | null>(null);
 
   const eventsRef = useRef<GameEventInput[]>([]);
   const pendingChangesRef = useRef<Record<string, PendingChange>>({});
@@ -581,7 +583,8 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
         damage: damageRows,
         events: eventsRef.current,
       });
-      resetToSetup(false);
+      setShowEndGame(false);
+      setVictoryFlourish(winner.name);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Couldn't save the game. Try again.");
     } finally {
@@ -838,6 +841,16 @@ export default function GameApp({ initialPlayers }: { initialPlayers: PlayerProf
           onConfirm={() => {
             setShowAbandonConfirm(false);
             abandonGame();
+          }}
+        />
+      )}
+
+      {victoryFlourish && (
+        <VictoryFlourish
+          winnerName={victoryFlourish}
+          onMainMenu={() => {
+            setVictoryFlourish(null);
+            resetToSetup(false);
           }}
         />
       )}

@@ -42,6 +42,51 @@ function useLifeDelta(life: number) {
   return delta;
 }
 
+const LIFE_TICK_DURATION_MS = 260;
+
+// Animates the displayed life total through the intermediate values on a
+// change instead of snapping straight to the new number — an odometer-style
+// roll, eased so it settles quickly even on a big swing.
+function useAnimatedNumber(target: number, durationMs: number) {
+  const [display, setDisplay] = useState(target);
+  const displayRef = useRef(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (displayRef.current === target) return;
+    const from = displayRef.current;
+    const start = performance.now();
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    function tick(now: number) {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = Math.round(from + (target - from) * eased);
+      displayRef.current = value;
+      setDisplay(value);
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, durationMs]);
+
+  return display;
+}
+
+// Pulse gets faster as life drops from 10 down to 1, fastest right before
+// elimination range; null (no pulse) once life is back to a safe range.
+function lifePulseDurationMs(life: number): number | null {
+  if (life <= 0 || life > 10) return null;
+  if (life > 5) return 1600;
+  const t = (5 - life) / 4;
+  return Math.round(1200 - t * 850);
+}
+
 // Card content is sized off the card's actual measured pixel footprint
 // (via useCardSizeTier), not the viewport — a 4-player quadrant on an iPad
 // and a 2-player card on a phone can be nearly the same physical size, and
@@ -109,19 +154,21 @@ export default function PlayerCard({
   const plusHold = useHoldRepeat();
   const lifeDelta = useLifeDelta(player.life);
   const tier = useCardSizeTier();
+  const displayedLife = useAnimatedNumber(player.life, LIFE_TICK_DURATION_MS);
 
   const lifeColor =
-    player.life <= 0
+    displayedLife <= 0
       ? "text-red-500"
-      : player.life <= 10
+      : displayedLife <= 10
       ? "text-amber-400"
       : "text-neutral-50";
+  const pulseDuration = lifePulseDurationMs(displayedLife);
 
   return (
     <div
-      className={`relative flex h-full w-full flex-col rounded-2xl border bg-cover bg-center p-2 transition-opacity ${
+      className={`relative flex h-full w-full flex-col rounded-2xl border bg-cover bg-center p-2 transition-all duration-700 ${
         player.eliminated
-          ? "border-neutral-800 bg-neutral-900/50 opacity-50"
+          ? "border-neutral-800 bg-neutral-900/50 opacity-50 grayscale"
           : isCurrentTurn
           ? "turn-indicator bg-neutral-900"
           : "border-neutral-800 bg-neutral-900"
@@ -146,11 +193,25 @@ export default function PlayerCard({
           </span>
         )}
         <span
-          className={`text-center ${LIFE_SIZE[tier]} font-black tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] ${lifeColor}`}
+          className={`text-center ${LIFE_SIZE[tier]} font-black tabular-nums drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] ${lifeColor} ${
+            pulseDuration ? "low-life-pulse" : ""
+          }`}
+          style={pulseDuration ? { animationDuration: `${pulseDuration}ms` } : undefined}
         >
-          {player.life}
+          {displayedLife}
         </span>
       </div>
+
+      {player.eliminated && (
+        <div className="elimination-flourish pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/toppng.com-classic-pirate-skull-illustration-1000x936.png"
+            alt=""
+            className="skull-outline h-[80%] w-[80%] object-contain"
+          />
+        </div>
+      )}
 
       {opponents.length > 0 && (
         <div className="mb-1 flex justify-center">
