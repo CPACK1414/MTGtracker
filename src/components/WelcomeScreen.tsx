@@ -133,6 +133,10 @@ export default function WelcomeScreen({
           </span>
         </button>
       </div>
+
+      <a href="/live" target="_blank" rel="noreferrer" className="text-xs text-neutral-600 underline">
+        Live Games link (for a TV or kiosk display)
+      </a>
     </div>
   );
 }
