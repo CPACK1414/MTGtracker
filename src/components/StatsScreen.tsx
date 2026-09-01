@@ -758,7 +758,7 @@ function CollapsibleSection({
   children,
 }: {
   title: string;
-  emoji: string;
+  emoji: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -769,7 +769,7 @@ function CollapsibleSection({
           onClick={() => setExpanded((v) => !v)}
           className="flex w-full items-center justify-between rounded-xl bg-neutral-800/90 px-3 py-2.5 active:scale-[0.99]"
         >
-          <span className="text-sm font-bold text-white">
+          <span className="flex items-center gap-1.5 text-sm font-bold text-white">
             {emoji} {title}
           </span>
           <span className="text-neutral-400">{expanded ? "▾" : "▸"}</span>
@@ -783,7 +783,13 @@ function CollapsibleSection({
 function FunStatsView({ stats }: { stats: ReportingData["funStats"] }) {
   return (
     <div className="flex flex-col gap-4">
-      <CollapsibleSection title="Wins & Losses" emoji="🏆">
+      <CollapsibleSection
+        title="Wins & Losses"
+        emoji={
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/Gold_trophy.png" alt="" className="h-6 w-auto" />
+        }
+      >
         <RankedFunStatCard
           emoji="💀"
           label="Professional Loser"

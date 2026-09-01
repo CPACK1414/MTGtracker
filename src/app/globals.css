@@ -153,6 +153,42 @@ body {
   }
 }
 
+/* Synced to the exact same 2s/0.5s-delay timing as trophy-pulse, so the
+   glow flares brightest right as the trophy hits peak scale, then fades
+   back down each cycle. */
+@keyframes trophy-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.trophy-glow {
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.85) 0%,
+    rgba(251, 191, 36, 0.35) 35%,
+    rgba(251, 191, 36, 0) 70%
+  );
+  filter: blur(6px);
+  animation: trophy-glow-pulse 2s ease-in-out 0.5s infinite;
+}
+
+.trophy-glow-subtle {
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.45) 0%,
+    rgba(251, 191, 36, 0.18) 40%,
+    rgba(251, 191, 36, 0) 70%
+  );
+  filter: blur(4px);
+}
+
 /* Expands the tappable area beyond the visible button box (mostly
    vertically, since the header row has spare padding there) without
    changing how big the button looks. */

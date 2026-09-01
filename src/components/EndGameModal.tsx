@@ -59,7 +59,13 @@ export default function EndGameModal({
                   {p.commander ? ` · ${p.commander}` : ""}
                 </p>
               </div>
-              {winnerId === p.id && <span className="text-emerald-400">🏆</span>}
+              {winnerId === p.id && (
+                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+                  <div className="trophy-glow-subtle pointer-events-none absolute inset-0 rounded-full" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/Gold_trophy.png" alt="" className="relative h-10 w-auto" />
+                </div>
+              )}
             </button>
           ))}
         </div>

@@ -181,17 +181,16 @@ export default function LifeChart({ chart }: { chart: GameLifeChart }) {
                   s.points.length > 0 &&
                   (() => {
                     const last = s.points[s.points.length - 1];
+                    const size = 30;
                     return (
-                      <text
-                        x={x(last.elapsedSeconds)}
-                        y={y(last.life)}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fontSize={16}
+                      <image
+                        href="/Gold_trophy.png"
+                        x={x(last.elapsedSeconds) - size / 2}
+                        y={y(last.life) - size / 2}
+                        width={size}
+                        height={size}
                         pointerEvents="none"
-                      >
-                        🏆
-                      </text>
+                      />
                     );
                   })()}
               </g>

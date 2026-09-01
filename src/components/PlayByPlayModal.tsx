@@ -174,9 +174,11 @@ export default function PlayByPlayModal({
                 ))}
 
             {winnerName && (
-              <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2">
+              <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Gold_trophy.png" alt="" className="h-6 w-auto" />
                 <span className="text-sm font-bold text-emerald-400">
-                  🏆 {displayName(winnerName, winnerScreenName)} wins
+                  {displayName(winnerName, winnerScreenName)} wins
                 </span>
               </div>
             )}

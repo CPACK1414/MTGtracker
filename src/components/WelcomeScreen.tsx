@@ -75,7 +75,10 @@ export default function WelcomeScreen({
           onClick={onStats}
           className="flex items-center gap-4 rounded-2xl bg-neutral-800 px-6 py-5 text-left active:scale-95"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center text-3xl">🏆</span>
+          <span className="flex w-9 shrink-0 items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Gold_trophy.png" alt="" className="h-14 w-auto" />
+          </span>
           <span>
             <span className="block text-lg font-bold text-white">Stats</span>
             <span className="block text-sm text-neutral-400">

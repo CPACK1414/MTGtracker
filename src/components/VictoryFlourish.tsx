@@ -43,7 +43,15 @@ export default function VictoryFlourish({
         />
       ))}
       <div className="victory-pop relative z-10 flex flex-col items-center gap-2 px-6 text-center">
-        <span className="text-6xl">🏆</span>
+        <div className="relative flex h-40 w-40 items-center justify-center">
+          <div className="trophy-glow pointer-events-none absolute inset-0 rounded-full" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/Gold_trophy.png"
+            alt=""
+            className="relative h-32 w-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+          />
+        </div>
         <p className="text-2xl font-black text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
           {winnerName} wins!
         </p>
