@@ -47,6 +47,14 @@ export default function LiveGamesScreen({
           </div>
         )}
         <p className="mt-6 text-center text-xs text-neutral-600">Updates every 20 seconds</p>
+        <a
+          href="/live"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 block text-center text-xs text-indigo-400 underline"
+        >
+          📺 Open TV / kiosk display
+        </a>
       </div>
     </div>
   );
