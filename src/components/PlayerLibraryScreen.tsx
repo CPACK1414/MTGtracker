@@ -28,12 +28,19 @@ export default function PlayerLibraryScreen({
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!error) return;
     const t = setTimeout(() => setError(null), 4000);
     return () => clearTimeout(t);
   }, [error]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   const filteredPlayers = players.filter((p) =>
     p.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -56,6 +63,11 @@ export default function PlayerLibraryScreen({
       setAddingPlayer(false);
       setError(null);
       onChangePlayers((prev) => [...prev, created]);
+      setNotice(
+        created.welcomeEmailSent
+          ? `Verification email sent to ${email} — have them check spam if it doesn't arrive.`
+          : `${name} was added, but the welcome email couldn't be sent.`
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't add player.");
     }
@@ -76,10 +88,13 @@ export default function PlayerLibraryScreen({
     screenName: string | null,
     email: string | null
   ): Promise<void> {
-    await renamePlayer(id, name, screenName, email);
+    const { welcomeEmailSent } = await renamePlayer(id, name, screenName, email);
     onChangePlayers((prev) =>
       prev.map((p) => (p.id === id ? { ...p, name, screenName, email } : p))
     );
+    if (welcomeEmailSent) {
+      setNotice(`Verification email sent to ${email} — have them check spam if it doesn't arrive.`);
+    }
   }
 
   async function addDeck(
@@ -160,6 +175,15 @@ export default function PlayerLibraryScreen({
         <div className="fixed inset-x-4 top-4 z-50 flex items-center justify-between gap-2 rounded-xl border border-red-900 bg-red-950 px-4 py-3 text-sm text-red-200 shadow-lg shadow-black/40">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="shrink-0 font-bold">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {notice && (
+        <div className="fixed inset-x-4 top-4 z-50 flex items-center justify-between gap-2 rounded-xl border border-emerald-900 bg-emerald-950 px-4 py-3 text-sm text-emerald-200 shadow-lg shadow-black/40">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} className="shrink-0 font-bold">
             ✕
           </button>
         </div>

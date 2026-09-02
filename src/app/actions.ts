@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { commanderDamage, decks, gameEvents, gameParticipants, games, players } from "@/db/schema";
 import { STARTING_LIFE, type EliminationReason } from "@/lib/types";
 import type { Deck, PlayerProfile } from "@/lib/library";
+import { sendPlayerWelcomeEmail } from "@/lib/welcomeEmail";
 
 function pgErrorCode(e: unknown): string | undefined {
   if (!e || typeof e !== "object") return undefined;
@@ -91,7 +92,7 @@ export async function createPlayer(
   name: string,
   screenName: string | null,
   email: string
-): Promise<PlayerProfile> {
+): Promise<PlayerProfile & { welcomeEmailSent: boolean }> {
   const trimmedEmail = email.trim();
   if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
     throw new Error("Enter a valid email address.");
@@ -101,7 +102,8 @@ export async function createPlayer(
     .insert(players)
     .values({ name, screenName: screenName?.trim() || null, email: trimmedEmail })
     .returning();
-  return { ...player, decks: [], gamesPlayed: 0 };
+  const welcomeEmailSent = await sendPlayerWelcomeEmail(name, trimmedEmail);
+  return { ...player, decks: [], gamesPlayed: 0, welcomeEmailSent };
 }
 
 export async function renamePlayer(
@@ -109,16 +111,21 @@ export async function renamePlayer(
   name: string,
   screenName: string | null,
   email: string | null
-): Promise<void> {
+): Promise<{ welcomeEmailSent: boolean }> {
   const trimmedEmail = email?.trim() || null;
   if (trimmedEmail && !isValidEmail(trimmedEmail)) {
     throw new Error("Enter a valid email address.");
   }
+  const [existing] = await db.select().from(players).where(eq(players.id, id));
   await ensureUniqueNames(name, screenName, id);
   await db
     .update(players)
     .set({ name, screenName, email: trimmedEmail })
     .where(eq(players.id, id));
+
+  const emailChanged = Boolean(trimmedEmail) && trimmedEmail !== existing?.email;
+  const welcomeEmailSent = emailChanged ? await sendPlayerWelcomeEmail(name, trimmedEmail!) : false;
+  return { welcomeEmailSent };
 }
 
 export async function deletePlayer(id: string): Promise<void> {
