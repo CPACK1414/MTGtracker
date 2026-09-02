@@ -1,4 +1,5 @@
 import { signIn } from "@/auth";
+import ManaCycle from "@/components/ManaCycle";
 
 export default async function SignInPage({
   searchParams,
@@ -10,6 +11,8 @@ export default async function SignInPage({
 
   return (
     <div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-8 bg-neutral-950 px-6 text-center">
+      <ManaCycle />
+
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white">MTG Game Tracker</h1>
         <p className="mt-2 text-neutral-400">
